@@ -59,31 +59,31 @@ namespace BuffSystem.Data
 
         #region Singleton Access
 
-        private static BuffSystemConfig _instance;
+        private static BuffSystemConfig instance;
 
         public static BuffSystemConfig Instance
         {
             get
             {
-                if (_instance == null)
+                if (instance == null)
                 {
                     LoadInstance();
                 }
 
-                return _instance;
+                return instance;
             }
         }
 
         private static void LoadInstance()
         {
             // 尝试从Resources加载
-            _instance = Resources.Load<BuffSystemConfig>("BuffSystem/BuffSystemConfig");
+            instance = Resources.Load<BuffSystemConfig>("BuffSystem/BuffSystemConfig");
 
-            if (_instance == null)
+            if (instance == null)
             {
                 // 创建默认配置
                 Debug.LogWarning("[BuffSystem] 未找到BuffSystemConfig，使用默认配置");
-                _instance = CreateInstance<BuffSystemConfig>();
+                instance = CreateInstance<BuffSystemConfig>();
             }
         }
 

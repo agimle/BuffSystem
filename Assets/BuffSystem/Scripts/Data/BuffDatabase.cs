@@ -10,12 +10,12 @@ namespace BuffSystem.Data
     /// </summary>
     public class BuffDatabase
     {
-        private static readonly BuffDatabase _instance = new();
-        public static BuffDatabase Instance => _instance;
+        private static readonly BuffDatabase instance = new();
+        public static BuffDatabase Instance => instance;
 
-        private readonly Dictionary<int, IBuffData> _idToData = new();
-        private readonly Dictionary<string, int> _nameToId = new();
-        private bool _isInitialized = false;
+        private readonly Dictionary<int, IBuffData> idToData = new();
+        private readonly Dictionary<string, int> nameToId = new();
+        private bool isInitialized;
 
         private BuffDatabase()
         {
@@ -26,12 +26,12 @@ namespace BuffSystem.Data
         /// </summary>
         public void Initialize()
         {
-            if (_isInitialized) return;
+            if (isInitialized) return;
 
             LoadAllBuffData();
-            _isInitialized = true;
+            isInitialized = true;
 
-            Debug.Log($"[BuffDatabase] 初始化完成，加载了 {_idToData.Count} 个Buff配置");
+            Debug.Log($"[BuffDatabase] 初始化完成，加载了 {idToData.Count} 个Buff配置");
         }
 
         /// <summary>
@@ -39,9 +39,9 @@ namespace BuffSystem.Data
         /// </summary>
         public void Reload()
         {
-            _idToData.Clear();
-            _nameToId.Clear();
-            _isInitialized = false;
+            idToData.Clear();
+            nameToId.Clear();
+            isInitialized = false;
             Initialize();
         }
 
@@ -76,23 +76,23 @@ namespace BuffSystem.Data
         {
             if (data == null) return;
 
-            if (_idToData.ContainsKey(data.Id))
+            if (idToData.ContainsKey(data.Id))
             {
                 Debug.LogWarning($"[BuffDatabase] Buff ID重复: {data.Id} - {data.Name}");
                 return;
             }
 
-            _idToData[data.Id] = data;
+            idToData[data.Id] = data;
 
             if (!string.IsNullOrEmpty(data.Name))
             {
-                if (_nameToId.ContainsKey(data.Name))
+                if (nameToId.ContainsKey(data.Name))
                 {
                     Debug.LogWarning($"[BuffDatabase] Buff名称重复: {data.Name}");
                 }
                 else
                 {
-                    _nameToId[data.Name] = data.Id;
+                    nameToId[data.Name] = data.Id;
                 }
             }
         }
@@ -103,7 +103,7 @@ namespace BuffSystem.Data
         public IBuffData GetBuffData(int id)
         {
             EnsureInitialized();
-            _idToData.TryGetValue(id, out var data);
+            idToData.TryGetValue(id, out var data);
             return data;
         }
 
@@ -113,7 +113,7 @@ namespace BuffSystem.Data
         public IBuffData GetBuffData(string name)
         {
             EnsureInitialized();
-            if (_nameToId.TryGetValue(name, out int id))
+            if (nameToId.TryGetValue(name, out int id))
             {
                 return GetBuffData(id);
             }
@@ -127,7 +127,7 @@ namespace BuffSystem.Data
         public int GetBuffId(string name)
         {
             EnsureInitialized();
-            return _nameToId.TryGetValue(name, out int id) ? id : -1;
+            return nameToId.TryGetValue(name, out int id) ? id : -1;
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace BuffSystem.Data
         public bool ContainsBuff(int id)
         {
             EnsureInitialized();
-            return _idToData.ContainsKey(id);
+            return idToData.ContainsKey(id);
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace BuffSystem.Data
         public bool ContainsBuff(string name)
         {
             EnsureInitialized();
-            return _nameToId.ContainsKey(name);
+            return nameToId.ContainsKey(name);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace BuffSystem.Data
         public IEnumerable<IBuffData> GetAllBuffData()
         {
             EnsureInitialized();
-            return _idToData.Values;
+            return idToData.Values;
         }
 
         /// <summary>
@@ -165,13 +165,13 @@ namespace BuffSystem.Data
             get
             {
                 EnsureInitialized();
-                return _idToData.Count;
+                return idToData.Count;
             }
         }
 
         private void EnsureInitialized()
         {
-            if (!_isInitialized)
+            if (!isInitialized)
             {
                 Initialize();
             }

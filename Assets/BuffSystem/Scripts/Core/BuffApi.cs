@@ -12,17 +12,17 @@ namespace BuffSystem.Core
     {
         #region Initialization
         
-        private static bool _isInitialized;
+        private static bool isInitialized;
         
         /// <summary>
         /// 初始化Buff系统
         /// </summary>
         public static void Initialize()
         {
-            if (_isInitialized) return;
+            if (isInitialized) return;
             
             BuffDatabase.Instance.Initialize();
-            _isInitialized = true;
+            isInitialized = true;
             
             Debug.Log("[BuffApi] Buff系统初始化完成");
         }
@@ -149,8 +149,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static void RemoveBuff(IBuff buff)
         {
-            if (buff?.Owner?.BuffContainer == null) return;
-            buff.Owner.BuffContainer.RemoveBuff(buff);
+            buff?.Owner?.BuffContainer?.RemoveBuff(buff);
         }
         
         /// <summary>
@@ -158,8 +157,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static void RemoveBuff(int buffId, IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return;
-            target.BuffContainer.RemoveBuff(buffId);
+            target?.BuffContainer?.RemoveBuff(buffId);
         }
         
         /// <summary>
@@ -181,8 +179,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static void RemoveBuffBySource(object source, IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return;
-            target.BuffContainer.RemoveBuffBySource(source);
+            target?.BuffContainer?.RemoveBuffBySource(source);
         }
         
         /// <summary>
@@ -190,8 +187,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static void ClearBuffs(IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return;
-            target.BuffContainer.ClearAllBuffs();
+            target?.BuffContainer?.ClearAllBuffs();
         }
         
         #endregion
@@ -203,8 +199,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static bool HasBuff(int buffId, IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return false;
-            return target.BuffContainer.HasBuff(buffId);
+            return target?.BuffContainer != null && target.BuffContainer.HasBuff(buffId);
         }
         
         /// <summary>
@@ -223,8 +218,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static bool HasBuff(int buffId, object source, IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return false;
-            return target.BuffContainer.HasBuff(buffId, source);
+            return target?.BuffContainer != null && target.BuffContainer.HasBuff(buffId, source);
         }
         
         /// <summary>
@@ -232,8 +226,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static IBuff GetBuff(int buffId, IBuffOwner target, object source = null)
         {
-            if (target?.BuffContainer == null) return null;
-            return target.BuffContainer.GetBuff(buffId, source);
+            return target?.BuffContainer?.GetBuff(buffId, source);
         }
         
         /// <summary>
@@ -254,8 +247,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static IEnumerable<IBuff> GetBuffs(int buffId, IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return System.Array.Empty<IBuff>();
-            return target.BuffContainer.GetBuffs(buffId);
+            return target?.BuffContainer != null ? target.BuffContainer.GetBuffs(buffId) : System.Array.Empty<IBuff>();
         }
         
         /// <summary>
@@ -276,8 +268,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static IReadOnlyCollection<IBuff> GetAllBuffs(IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return System.Array.Empty<IBuff>();
-            return target.BuffContainer.AllBuffs;
+            return target?.BuffContainer != null ? target.BuffContainer.AllBuffs : System.Array.Empty<IBuff>();
         }
         
         /// <summary>
@@ -285,8 +276,7 @@ namespace BuffSystem.Core
         /// </summary>
         public static int GetBuffCount(IBuffOwner target)
         {
-            if (target?.BuffContainer == null) return 0;
-            return target.BuffContainer.AllBuffs.Count;
+            return target?.BuffContainer?.AllBuffs.Count ?? 0;
         }
         
         #endregion
@@ -372,7 +362,7 @@ namespace BuffSystem.Core
         
         private static void EnsureInitialized()
         {
-            if (!_isInitialized)
+            if (!isInitialized)
             {
                 Initialize();
             }

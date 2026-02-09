@@ -133,13 +133,13 @@ namespace BuffSystem.Strategy
     /// </summary>
     public class ReduceStackStrategy : IRemoveStrategy
     {
-        private readonly int _reduceAmount;
-        private readonly float _interval;
+        private readonly int reduceAmount;
+        private readonly float interval;
 
         public ReduceStackStrategy(int reduceAmount, float interval)
         {
-            _reduceAmount = reduceAmount;
-            _interval = interval;
+            this.reduceAmount = reduceAmount;
+            this.interval = interval;
         }
 
         public void HandleRemove(IBuff buff)

@@ -10,41 +10,36 @@ namespace BuffSystem.Core
     [Serializable]
     public abstract class BuffLogicBase : IBuffLogic
     {
-        [NonSerialized] private IBuff _buff;
+        [NonSerialized] private IBuff buff;
         
         /// <summary>
         /// 所属的Buff实例
         /// </summary>
-        public IBuff Buff => _buff;
+        public IBuff Buff => buff;
         
         /// <summary>
         /// 所属Buff的持有者
         /// </summary>
-        protected IBuffOwner Owner => _buff?.Owner;
+        protected IBuffOwner Owner => buff?.Owner;
         
         /// <summary>
         /// Buff来源
         /// </summary>
-        protected object Source => _buff?.Source;
+        protected object Source => buff?.Source;
         
         /// <summary>
         /// 当前层数
         /// </summary>
-        protected int CurrentStack => _buff?.CurrentStack ?? 0;
-        
-        /// <summary>
-        /// 剩余时间
-        /// </summary>
-        protected float RemainingTime => _buff?.RemainingTime ?? 0f;
+        protected int CurrentStack => buff?.CurrentStack ?? 0;
 
-        IBuff IBuffLogic.Buff { get => _buff; set => _buff = value; }
+        IBuff IBuffLogic.Buff { get => buff; set => buff = value; }
         
         /// <summary>
         /// 初始化
         /// </summary>
-        public virtual void Initialize(IBuff buff)
+        public virtual void Initialize(IBuff initBuff)
         {
-            _buff = buff ?? throw new ArgumentNullException(nameof(buff));
+            this.buff = initBuff ?? throw new ArgumentNullException(nameof(initBuff));
             OnInitialized();
         }
         
@@ -59,7 +54,7 @@ namespace BuffSystem.Core
         public virtual void Dispose()
         {
             OnDisposed();
-            _buff = null;
+            buff = null;
         }
         
         /// <summary>
@@ -91,13 +86,13 @@ namespace BuffSystem.Core
         {
             component = null;
             
-            if (Owner is MonoBehaviour mono)
+            if (!(Owner is MonoBehaviour mono))
             {
-                component = mono.GetComponent<T>();
-                return component != null;
+                return false;
             }
             
-            return false;
+            component = mono.GetComponent<T>();
+            return component != null;
         }
         
         /// <summary>

@@ -9,23 +9,23 @@ namespace BuffSystem.Editor
     /// </summary>
     public static class BuffSystemMenu
     {
-        private const string MenuRoot = "BuffSystem/";
+        private const string menuRoot = "BuffSystem/";
         
         #region Create Assets
         
-        [MenuItem(MenuRoot + "Create/Buff Data", priority = 1)]
+        [MenuItem(menuRoot + "Create/Buff Data", priority = 1)]
         private static void CreateBuffData()
         {
             CreateAsset<BuffDataSO>("NewBuffData");
-        }
+        }   
         
-        [MenuItem(MenuRoot + "Create/Buff Data Center", priority = 2)]
+        [MenuItem(menuRoot + "Create/Buff Data Center", priority = 2)]
         private static void CreateBuffDataCenter()
         {
             CreateAsset<BuffDataCenter>("BuffDataCenter");
         }
         
-        [MenuItem(MenuRoot + "Create/System Config", priority = 3)]
+        [MenuItem(menuRoot + "Create/System Config", priority = 3)]
         private static void CreateBuffSystemConfig()
         {
             CreateAsset<BuffSystemConfig>("BuffSystemConfig");
@@ -57,14 +57,14 @@ namespace BuffSystem.Editor
         
         #region Tools
         
-        [MenuItem(MenuRoot + "Tools/Reload Database", priority = 20)]
+        [MenuItem(menuRoot + "Tools/Reload Database", priority = 20)]
         private static void ReloadDatabase()
         {
             BuffDatabase.Instance.Reload();
             EditorUtility.DisplayDialog("BuffSystem", "Buff数据库已重新加载", "确定");
         }
         
-        [MenuItem(MenuRoot + "Tools/Create Resources Folders", priority = 21)]
+        [MenuItem(menuRoot + "Tools/Create Resources Folders", priority = 21)]
         private static void CreateResourcesFolders()
         {
             CreateFolder("Assets/Resources/BuffSystem");
@@ -86,7 +86,7 @@ namespace BuffSystem.Editor
         
         #region Documentation
 
-        [MenuItem(MenuRoot + "Documentation/Open README", priority = 40)]
+        [MenuItem(menuRoot + "Documentation/Open README", priority = 40)]
         private static void OpenDocumentation()
         {
             // 尝试打开本地README文件

@@ -15,37 +15,37 @@ namespace BuffSystem.Runtime
         [SerializeField] private UpdateMode updateMode = UpdateMode.EveryFrame;
         [SerializeField] private float updateInterval = 0.1f;
         
-        private float _updateTimer;
-        private static BuffSystemUpdater _instance;
+        private float updateTimer;
+        private static BuffSystemUpdater instance;
         
         public static BuffSystemUpdater Instance
         {
             get
             {
-                if (_instance == null)
+                if (instance == null)
                 {
                     CreateInstance();
                 }
-                return _instance;
+                return instance;
             }
         }
         
         private static void CreateInstance()
         {
             var go = new GameObject("BuffSystemUpdater");
-            _instance = go.AddComponent<BuffSystemUpdater>();
+            instance = go.AddComponent<BuffSystemUpdater>();
             DontDestroyOnLoad(go);
         }
         
         private void Awake()
         {
-            if (_instance != null && _instance != this)
+            if (instance != null && instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
             
-            _instance = this;
+            instance = this;
             DontDestroyOnLoad(gameObject);
             
             // 加载配置
@@ -64,11 +64,11 @@ namespace BuffSystem.Runtime
             }
             else if (updateMode == UpdateMode.Interval)
             {
-                _updateTimer += Time.deltaTime;
-                if (_updateTimer >= updateInterval)
+                updateTimer += Time.deltaTime;
+                if (updateTimer >= updateInterval)
                 {
-                    UpdateAllContainers(_updateTimer);
-                    _updateTimer = 0f;
+                    UpdateAllContainers(updateTimer);
+                    updateTimer = 0f;
                 }
             }
         }
@@ -78,8 +78,8 @@ namespace BuffSystem.Runtime
         /// </summary>
         public static void UpdateAll(float deltaTime)
         {
-            if (_instance == null) return;
-            _instance.UpdateAllContainers(deltaTime);
+            if (instance == null) return;
+            instance.UpdateAllContainers(deltaTime);
         }
         
         private void UpdateAllContainers(float deltaTime)

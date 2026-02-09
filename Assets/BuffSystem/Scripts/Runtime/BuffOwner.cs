@@ -17,29 +17,26 @@ namespace BuffSystem.Runtime
         [SerializeField] private bool updateInFixedUpdate = false;
         [SerializeField] private bool showDebugInfo = false;
         
-        [Header("事件")]
-        [SerializeField] private bool useUnityEvents = false;
-        
         // 内部组件
-        private BuffContainer _buffContainer;
-        private BuffLocalEventSystem _localEvents;
+        private BuffContainer buffContainer;
+        private BuffLocalEventSystem localEvents;
         
         #region Properties
         
         /// <summary>
         /// Buff容器
         /// </summary>
-        public IBuffContainer BuffContainer => _buffContainer;
+        public IBuffContainer BuffContainer => buffContainer;
         
         /// <summary>
         /// 本地事件系统
         /// </summary>
-        public BuffLocalEventSystem LocalEvents => _localEvents;
+        public BuffLocalEventSystem LocalEvents => localEvents;
         
         /// <summary>
         /// 当前Buff数量
         /// </summary>
-        public int BuffCount => _buffContainer?.Count ?? 0;
+        public int BuffCount => buffContainer?.Count ?? 0;
         
         #endregion
         
@@ -60,22 +57,22 @@ namespace BuffSystem.Runtime
             switch (eventType)
             {
                 case BuffEventType.Added:
-                    _localEvents?.TriggerBuffAdded(buff);
+                    localEvents?.TriggerBuffAdded(buff);
                     break;
                 case BuffEventType.Removed:
-                    _localEvents?.TriggerBuffRemoved(buff);
+                    localEvents?.TriggerBuffRemoved(buff);
                     break;
                 case BuffEventType.StackChanged:
                     // 层数变化在Buff内部处理
                     break;
                 case BuffEventType.Refreshed:
-                    _localEvents?.TriggerRefreshed(buff);
+                    localEvents?.TriggerRefreshed(buff);
                     break;
                 case BuffEventType.Expired:
-                    _localEvents?.TriggerExpired(buff);
+                    localEvents?.TriggerExpired(buff);
                     break;
                 case BuffEventType.Cleared:
-                    _localEvents?.TriggerCleared();
+                    localEvents?.TriggerCleared();
                     break;
             }
         }
@@ -94,26 +91,26 @@ namespace BuffSystem.Runtime
         
         private void Update()
         {
-            if (!updateInFixedUpdate && _buffContainer != null)
+            if (!updateInFixedUpdate && buffContainer != null)
             {
-                _buffContainer.Update(Time.deltaTime);
+                buffContainer.Update(Time.deltaTime);
             }
         }
         
         private void FixedUpdate()
         {
-            if (updateInFixedUpdate && _buffContainer != null)
+            if (updateInFixedUpdate && buffContainer != null)
             {
-                _buffContainer.Update(Time.fixedDeltaTime);
+                buffContainer.Update(Time.fixedDeltaTime);
             }
         }
         
         private void OnDestroy()
         {
             // 清理所有Buff
-            _buffContainer?.ClearAllBuffs();
-            _buffContainer = null;
-            _localEvents = null;
+            buffContainer?.ClearAllBuffs();
+            buffContainer = null;
+            localEvents = null;
         }
         
         #endregion
@@ -125,10 +122,10 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void Initialize()
         {
-            if (_buffContainer != null) return;
+            if (buffContainer != null) return;
             
-            _buffContainer = new BuffContainer(this);
-            _localEvents = new BuffLocalEventSystem(this);
+            buffContainer = new BuffContainer(this);
+            localEvents = new BuffLocalEventSystem(this);
             
             // 初始化Buff系统
             BuffApi.Initialize();
@@ -227,13 +224,13 @@ namespace BuffSystem.Runtime
         
         #region Debug
 
-        private static readonly Rect DebugWindowRect = new(10, 10, 250, 300);
+        private static readonly Rect debugWindowRect = new(10, 10, 250, 300);
 
         private void OnGUI()
         {
-            if (!showDebugInfo || _buffContainer == null) return;
+            if (!showDebugInfo || buffContainer == null) return;
 
-            GUILayout.BeginArea(DebugWindowRect);
+            GUILayout.BeginArea(debugWindowRect);
             GUILayout.BeginVertical("box");
 
             GUILayout.Label($"<b>{gameObject.name}</b>");
@@ -244,7 +241,7 @@ namespace BuffSystem.Runtime
                 GUILayout.Space(5);
                 GUILayout.Label("<b>当前Buff:</b>");
 
-                foreach (var buff in _buffContainer.AllBuffs)
+                foreach (var buff in buffContainer.AllBuffs)
                 {
                     string timeText = buff.IsPermanent ? "∞" : $"{buff.RemainingTime:F1}s";
                     GUILayout.Label($"  • {buff.Name} ({buff.CurrentStack}/{buff.MaxStack}) [{timeText}]");

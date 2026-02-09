@@ -14,18 +14,18 @@ namespace BuffSystem.Runtime
     public class BuffContainer : IBuffContainer
     {
         // Buff存储
-        private readonly Dictionary<int, BuffEntity> _buffByInstanceId = new();
-        private readonly Dictionary<int, List<BuffEntity>> _buffsByDataId = new();
-        private readonly Dictionary<object, List<BuffEntity>> _buffsBySource = new();
+        private readonly Dictionary<int, BuffEntity> buffByInstanceId = new();
+        private readonly Dictionary<int, List<BuffEntity>> buffsByDataId = new();
+        private readonly Dictionary<object, List<BuffEntity>> buffsBySource = new();
 
         // 待移除队列
-        private readonly Queue<int> _removalQueue = new();
+        private readonly Queue<int> removalQueue = new();
 
         // 对象池
-        private readonly ObjectPool<BuffEntity> _buffPool;
+        private readonly ObjectPool<BuffEntity> buffPool;
 
         // Buff列表缓存（避免GC）
-        private readonly List<IBuff> _buffCache = new();
+        private readonly List<IBuff> buffCache = new();
 
         // 所属持有者
         public IBuffOwner Owner { get; }
@@ -37,19 +37,19 @@ namespace BuffSystem.Runtime
         {
             get
             {
-                _buffCache.Clear();
-                foreach (var buff in _buffByInstanceId.Values)
+                buffCache.Clear();
+                foreach (var buff in buffByInstanceId.Values)
                 {
-                    _buffCache.Add(buff);
+                    buffCache.Add(buff);
                 }
-                return _buffCache;
+                return buffCache;
             }
         }
         
         /// <summary>
         /// 当前Buff数量
         /// </summary>
-        public int Count => _buffByInstanceId.Count;
+        public int Count => buffByInstanceId.Count;
         
         /// <summary>
         /// 构造函数
@@ -59,7 +59,7 @@ namespace BuffSystem.Runtime
             Owner = owner ?? throw new ArgumentNullException(nameof(owner));
             
             var config = Data.BuffSystemConfig.Instance;
-            _buffPool = new ObjectPool<BuffEntity>(
+            buffPool = new ObjectPool<BuffEntity>(
                 createFunc: CreateBuffEntity,
                 actionOnGet: null,
                 actionOnRelease: ReleaseBuffEntity,
@@ -101,7 +101,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         private BuffEntity GetUniqueBuff(int dataId)
         {
-            if (_buffsByDataId.TryGetValue(dataId, out var buffs) && buffs.Count > 0)
+            if (buffsByDataId.TryGetValue(dataId, out var buffs) && buffs.Count > 0)
             {
                 return buffs[0];
             }
@@ -142,25 +142,25 @@ namespace BuffSystem.Runtime
         private IBuff CreateNewBuff(IBuffData data, object source)
         {
             // 从对象池获取
-            BuffEntity buff = _buffPool.Get();
+            BuffEntity buff = buffPool.Get();
             buff.Reset(data, Owner, source);
             
             // 存储
-            _buffByInstanceId[buff.InstanceId] = buff;
+            buffByInstanceId[buff.InstanceId] = buff;
             
-            if (!_buffsByDataId.TryGetValue(data.Id, out var dataIdList))
+            if (!buffsByDataId.TryGetValue(data.Id, out var dataIdList))
             {
                 dataIdList = new List<BuffEntity>();
-                _buffsByDataId[data.Id] = dataIdList;
+                buffsByDataId[data.Id] = dataIdList;
             }
             dataIdList.Add(buff);
             
             if (source != null)
             {
-                if (!_buffsBySource.TryGetValue(source, out var sourceList))
+                if (!buffsBySource.TryGetValue(source, out var sourceList))
                 {
                     sourceList = new List<BuffEntity>();
-                    _buffsBySource[source] = sourceList;
+                    buffsBySource[source] = sourceList;
                 }
                 sourceList.Add(buff);
             }
@@ -191,7 +191,7 @@ namespace BuffSystem.Runtime
             if (buff is BuffEntity entity)
             {
                 entity.MarkForRemoval();
-                _removalQueue.Enqueue(entity.InstanceId);
+                removalQueue.Enqueue(entity.InstanceId);
             }
         }
         
@@ -200,7 +200,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void RemoveBuff(int dataId)
         {
-            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
                 foreach (var buff in buffs.ToList())
                 {
@@ -216,7 +216,7 @@ namespace BuffSystem.Runtime
         {
             if (source == null) return;
             
-            if (_buffsBySource.TryGetValue(source, out var buffs))
+            if (buffsBySource.TryGetValue(source, out var buffs))
             {
                 foreach (var buff in buffs.ToList())
                 {
@@ -230,7 +230,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void ClearAllBuffs()
         {
-            foreach (var buff in _buffByInstanceId.Values.ToList())
+            foreach (var buff in buffByInstanceId.Values.ToList())
             {
                 RemoveBuff(buff);
             }
@@ -250,7 +250,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff GetBuff(int dataId, object source = null)
         {
-            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
                 if (source == null)
                 {
@@ -267,9 +267,9 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IEnumerable<IBuff> GetBuffs(int dataId)
         {
-            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
-                return buffs.Cast<IBuff>();
+                return buffs;
             }
             return Enumerable.Empty<IBuff>();
         }
@@ -279,9 +279,9 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IEnumerable<IBuff> GetBuffsBySource(object source)
         {
-            if (source != null && _buffsBySource.TryGetValue(source, out var buffs))
+            if (source != null && buffsBySource.TryGetValue(source, out var buffs))
             {
-                return buffs.Cast<IBuff>();
+                return buffs;
             }
             return Enumerable.Empty<IBuff>();
         }
@@ -291,7 +291,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public bool HasBuff(int dataId)
         {
-            return _buffsByDataId.ContainsKey(dataId) && _buffsByDataId[dataId].Count > 0;
+            return buffsByDataId.ContainsKey(dataId) && buffsByDataId[dataId].Count > 0;
         }
         
         /// <summary>
@@ -299,7 +299,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public bool HasBuff(int dataId, object source)
         {
-            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
                 return buffs.Any(b => b.Source == source);
             }
@@ -316,13 +316,13 @@ namespace BuffSystem.Runtime
         public void Update(float deltaTime)
         {
             // 更新所有Buff
-            foreach (var buff in _buffByInstanceId.Values)
+            foreach (var buff in buffByInstanceId.Values)
             {
                 buff.Update(deltaTime);
                 
-                if (buff.IsMarkedForRemoval && !_removalQueue.Contains(buff.InstanceId))
+                if (buff.IsMarkedForRemoval && !removalQueue.Contains(buff.InstanceId))
                 {
-                    _removalQueue.Enqueue(buff.InstanceId);
+                    removalQueue.Enqueue(buff.InstanceId);
                 }
             }
             
@@ -335,33 +335,33 @@ namespace BuffSystem.Runtime
         /// </summary>
         private void ProcessRemovalQueue()
         {
-            while (_removalQueue.Count > 0)
+            while (removalQueue.Count > 0)
             {
-                int instanceId = _removalQueue.Dequeue();
+                int instanceId = removalQueue.Dequeue();
                 
-                if (!_buffByInstanceId.TryGetValue(instanceId, out var buff))
+                if (!buffByInstanceId.TryGetValue(instanceId, out var buff))
                 {
                     continue;
                 }
                 
                 // 从存储中移除
-                _buffByInstanceId.Remove(instanceId);
+                buffByInstanceId.Remove(instanceId);
                 
-                if (_buffsByDataId.TryGetValue(buff.DataId, out var dataIdList))
+                if (buffsByDataId.TryGetValue(buff.DataId, out var dataIdList))
                 {
                     dataIdList.Remove(buff);
                     if (dataIdList.Count == 0)
                     {
-                        _buffsByDataId.Remove(buff.DataId);
+                        buffsByDataId.Remove(buff.DataId);
                     }
                 }
                 
-                if (buff.Source != null && _buffsBySource.TryGetValue(buff.Source, out var sourceList))
+                if (buff.Source != null && buffsBySource.TryGetValue(buff.Source, out var sourceList))
                 {
                     sourceList.Remove(buff);
                     if (sourceList.Count == 0)
                     {
-                        _buffsBySource.Remove(buff.Source);
+                        buffsBySource.Remove(buff.Source);
                     }
                 }
                 
@@ -371,7 +371,7 @@ namespace BuffSystem.Runtime
                 
                 // 清理并归还对象池
                 buff.Cleanup();
-                _buffPool.Release(buff);
+                buffPool.Release(buff);
                 
                 if (Data.BuffSystemConfig.Instance.EnableDebugLog)
                 {

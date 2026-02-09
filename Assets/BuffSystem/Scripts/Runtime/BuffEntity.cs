@@ -11,42 +11,42 @@ namespace BuffSystem.Runtime
     /// </summary>
     public class BuffEntity : IBuff
     {
-        private static int _globalInstanceId;
+        private static int globalInstanceId;
         
         // 基础信息
-        private int _instanceId;
-        private IBuffData _data;
-        private IBuffOwner _owner;
-        private object _source;
+        private int instanceId;
+        private IBuffData data;
+        private IBuffOwner owner;
+        private object source;
         
         // 运行时数据
-        private int _currentStack;
-        private float _duration;
-        private float _removeIntervalTimer;
-        private bool _isMarkedForRemoval;
+        private int currentStack;
+        private float duration;
+        private float removeIntervalTimer;
+        private bool isMarkedForRemoval;
         
         // 逻辑实例
-        private IBuffLogic _logic;
+        private IBuffLogic logic;
         
         #region IBuff Implementation
         
-        public int InstanceId => _instanceId;
-        public int DataId => _data?.Id ?? -1;
-        public string Name => _data?.Name ?? "Unknown";
-        public int CurrentStack => _currentStack;
-        public int MaxStack => _data?.MaxStack ?? 1;
-        public float Duration => _duration;
-        public float TotalDuration => _data?.Duration ?? 0f;
-        public float RemainingTime => IsPermanent ? float.MaxValue : Mathf.Max(0, TotalDuration - _duration);
-        public bool IsPermanent => _data?.IsPermanent ?? false;
-        public bool IsMarkedForRemoval => _isMarkedForRemoval;
-        public object Source => _source;
-        public IBuffOwner Owner => _owner;
-        public IBuffData Data => _data;
+        public int InstanceId => instanceId;
+        public int DataId => data?.Id ?? -1;
+        public string Name => data?.Name ?? "Unknown";
+        public int CurrentStack => currentStack;
+        public int MaxStack => data?.MaxStack ?? 1;
+        public float Duration => duration;
+        public float TotalDuration => data?.Duration ?? 0f;
+        public float RemainingTime => IsPermanent ? float.MaxValue : Mathf.Max(0, TotalDuration - duration);
+        public bool IsPermanent => data?.IsPermanent ?? false;
+        public bool IsMarkedForRemoval => isMarkedForRemoval;
+        public object Source => source;
+        public IBuffOwner Owner => owner;
+        public IBuffData Data => data;
         
         public T GetSource<T>() where T : class
         {
-            return _source as T;
+            return source as T;
         }
         
         #endregion
@@ -56,32 +56,32 @@ namespace BuffSystem.Runtime
         /// </summary>
         public BuffEntity()
         {
-            _instanceId = ++_globalInstanceId;
+            instanceId = ++globalInstanceId;
         }
         
         /// <summary>
         /// 重置Buff（对象池回收后重新初始化）
         /// </summary>
-        public void Reset(IBuffData data, IBuffOwner owner, object source)
+        public void Reset(IBuffData newData, IBuffOwner newOwner, object newSource)
         {
-            _data = data ?? throw new ArgumentNullException(nameof(data));
-            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            _source = source;
+            data = newData ?? throw new ArgumentNullException(nameof(newData));
+            owner = newOwner ?? throw new ArgumentNullException(nameof(newOwner));
+            source = newSource;
             
-            _currentStack = 0;
-            _duration = 0f;
-            _removeIntervalTimer = 0f;
-            _isMarkedForRemoval = false;
+            currentStack = 0;
+            duration = 0f;
+            removeIntervalTimer = 0f;
+            isMarkedForRemoval = false;
             
             // 创建逻辑实例
-            _logic = data.CreateLogic();
-            _logic?.Initialize(this);
+            logic = data.CreateLogic();
+            logic?.Initialize(this);
             
             // 初始层数
             AddStack(data.AddStackCount);
             
             // 触发开始事件
-            if (_logic is IBuffStart startLogic)
+            if (logic is IBuffStart startLogic)
             {
                 startLogic.OnStart();
             }
@@ -93,16 +93,16 @@ namespace BuffSystem.Runtime
         internal void Cleanup()
         {
             // 触发结束事件
-            if (_logic is IBuffEnd endLogic)
+            if (logic is IBuffEnd endLogic)
             {
                 endLogic.OnEnd();
             }
             
-            _logic?.Dispose();
-            _logic = null;
-            _data = null;
-            _owner = null;
-            _source = null;
+            logic?.Dispose();
+            logic = null;
+            data = null;
+            owner = null;
+            source = null;
         }
         
         /// <summary>
@@ -112,18 +112,18 @@ namespace BuffSystem.Runtime
         {
             if (amount <= 0) return;
             
-            int oldStack = _currentStack;
-            _currentStack = Mathf.Min(_currentStack + amount, MaxStack);
+            int oldStack = currentStack;
+            currentStack = Mathf.Min(currentStack + amount, MaxStack);
             
-            if (_currentStack != oldStack)
+            if (currentStack != oldStack)
             {
                 // 触发层数变化事件
-                if (_logic is IBuffStackChange stackChangeLogic)
+                if (logic is IBuffStackChange stackChangeLogic)
                 {
-                    stackChangeLogic.OnStackChanged(oldStack, _currentStack);
+                    stackChangeLogic.OnStackChanged(oldStack, currentStack);
                 }
                 
-                BuffEventSystem.TriggerStackChanged(this, oldStack, _currentStack);
+                BuffEventSystem.TriggerStackChanged(this, oldStack, currentStack);
             }
         }
         
@@ -134,28 +134,28 @@ namespace BuffSystem.Runtime
         {
             if (amount <= 0) return;
             
-            int oldStack = _currentStack;
-            _currentStack = Mathf.Max(_currentStack - amount, 0);
+            int oldStack = currentStack;
+            currentStack = Mathf.Max(currentStack - amount, 0);
             
-            if (_currentStack != oldStack)
+            if (currentStack != oldStack)
             {
                 // 触发消层事件
-                if (_logic is IBuffReduce reduceLogic)
+                if (logic is IBuffReduce reduceLogic)
                 {
                     reduceLogic.OnReduce();
                 }
                 
                 // 触发层数变化事件
-                if (_logic is IBuffStackChange stackChangeLogic)
+                if (logic is IBuffStackChange stackChangeLogic)
                 {
-                    stackChangeLogic.OnStackChanged(oldStack, _currentStack);
+                    stackChangeLogic.OnStackChanged(oldStack, currentStack);
                 }
                 
-                BuffEventSystem.TriggerStackChanged(this, oldStack, _currentStack);
+                BuffEventSystem.TriggerStackChanged(this, oldStack, currentStack);
             }
             
             // 层数为0时标记移除
-            if (_currentStack <= 0)
+            if (currentStack <= 0)
             {
                 MarkForRemoval();
             }
@@ -168,20 +168,20 @@ namespace BuffSystem.Runtime
         {
             if (!CanRefresh) return;
             
-            float oldDuration = _duration;
-            _duration = 0f;
-            _removeIntervalTimer = 0f;
+            float oldDuration = duration;
+            duration = 0f;
+            removeIntervalTimer = 0f;
             
             // 触发刷新事件
-            if (_logic is IBuffRefresh refreshLogic)
+            if (logic is IBuffRefresh refreshLogic)
             {
                 refreshLogic.OnRefresh();
             }
             
             // 触发持续时间变化事件
-            if (_logic is IBuffDurationChange durationChangeLogic)
+            if (logic is IBuffDurationChange durationChangeLogic)
             {
-                durationChangeLogic.OnDurationChanged(oldDuration, _duration);
+                durationChangeLogic.OnDurationChanged(oldDuration, duration);
             }
             
             BuffEventSystem.TriggerRefreshed(this);
@@ -192,12 +192,12 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void MarkForRemoval()
         {
-            if (_isMarkedForRemoval) return;
+            if (isMarkedForRemoval) return;
             
-            _isMarkedForRemoval = true;
+            isMarkedForRemoval = true;
             
             // 触发移除事件
-            if (_logic is IBuffRemove removeLogic)
+            if (logic is IBuffRemove removeLogic)
             {
                 removeLogic.OnRemove();
             }
@@ -208,11 +208,11 @@ namespace BuffSystem.Runtime
         /// </summary>
         internal void Update(float deltaTime)
         {
-            if (_isMarkedForRemoval) return;
-            if (_data == null) return;
+            if (isMarkedForRemoval) return;
+            if (data == null) return;
             
             // 逻辑更新
-            if (_logic is IBuffLogicUpdate logicUpdate)
+            if (logic is IBuffLogicUpdate logicUpdate)
             {
                 logicUpdate.OnLogicUpdate(deltaTime);
             }
@@ -224,7 +224,7 @@ namespace BuffSystem.Runtime
             }
             
             // 表现更新
-            if (_logic is IBuffVisualUpdate visualUpdate)
+            if (logic is IBuffVisualUpdate visualUpdate)
             {
                 visualUpdate.OnVisualUpdate(deltaTime);
             }
@@ -235,9 +235,9 @@ namespace BuffSystem.Runtime
         /// </summary>
         private void UpdateDuration(float deltaTime)
         {
-            _duration += deltaTime;
+            duration += deltaTime;
             
-            if (_duration >= TotalDuration)
+            if (duration >= TotalDuration)
             {
                 // 处理消层或移除
                 HandleExpiration(deltaTime);
@@ -249,7 +249,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         private void HandleExpiration(float deltaTime)
         {
-            if (_data.RemoveMode == BuffRemoveMode.Remove)
+            if (data.RemoveMode == BuffRemoveMode.Remove)
             {
                 // 直接移除
                 MarkForRemoval();
@@ -257,15 +257,15 @@ namespace BuffSystem.Runtime
             else
             {
                 // 逐层移除
-                _removeIntervalTimer += deltaTime;
-                float interval = _data.RemoveInterval;
+                removeIntervalTimer += deltaTime;
+                float interval = data.RemoveInterval;
                 
                 if (interval <= 0) interval = 0.1f; // 防止除零
                 
-                while (_removeIntervalTimer >= interval && !_isMarkedForRemoval)
+                while (removeIntervalTimer >= interval && !isMarkedForRemoval)
                 {
-                    _removeIntervalTimer -= interval;
-                    RemoveStack(_data.RemoveStackCount);
+                    removeIntervalTimer -= interval;
+                    RemoveStack(data.RemoveStackCount);
                 }
             }
         }
@@ -273,19 +273,19 @@ namespace BuffSystem.Runtime
         /// <summary>
         /// 是否可以刷新
         /// </summary>
-        private bool CanRefresh => _data?.CanRefresh ?? false;
+        private bool CanRefresh => data?.CanRefresh ?? false;
 
-        public int SourceId => _source?.GetHashCode() ?? 0;
+        public int SourceId => source?.GetHashCode() ?? 0;
 
         public override string ToString()
         {
             return $"Buff[{InstanceId}] {Name} (Stack: {CurrentStack}/{MaxStack}, Time: {RemainingTime:F1}s)";
         }
 
-        public bool TryGetSource<T>(out T source) where T : class
+        public bool TryGetSource<T>(out T sourceOut) where T : class
         {
-            source = _source as T;
-            return source != null;
+            sourceOut = source as T;
+            return sourceOut != null;
         }
     }
 }

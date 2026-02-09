@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using BuffSystem.Core;
 
 namespace BuffSystem.Events
@@ -171,7 +170,7 @@ namespace BuffSystem.Events
     /// </summary>
     public class BuffLocalEventSystem
     {
-        private readonly IBuffOwner _owner;
+        private readonly IBuffOwner owner;
         
         public event EventHandler<BuffAddedEventArgs> OnBuffAdded;
         public event EventHandler<BuffRemovedEventArgs> OnBuffRemoved;
@@ -182,37 +181,37 @@ namespace BuffSystem.Events
         
         public BuffLocalEventSystem(IBuffOwner owner)
         {
-            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            this.owner = owner ?? throw new ArgumentNullException(nameof(owner));
         }
         
         internal void TriggerBuffAdded(IBuff buff)
         {
-            OnBuffAdded?.Invoke(_owner, new BuffAddedEventArgs(buff));
+            OnBuffAdded?.Invoke(owner, new BuffAddedEventArgs(buff));
         }
         
         internal void TriggerBuffRemoved(IBuff buff)
         {
-            OnBuffRemoved?.Invoke(_owner, new BuffRemovedEventArgs(buff));
+            OnBuffRemoved?.Invoke(owner, new BuffRemovedEventArgs(buff));
         }
         
         internal void TriggerStackChanged(IBuff buff, int oldStack, int newStack)
         {
-            OnStackChanged?.Invoke(_owner, new BuffStackChangedEventArgs(buff, oldStack, newStack));
+            OnStackChanged?.Invoke(owner, new BuffStackChangedEventArgs(buff, oldStack, newStack));
         }
         
         internal void TriggerRefreshed(IBuff buff)
         {
-            OnBuffRefreshed?.Invoke(_owner, new BuffRefreshedEventArgs(buff));
+            OnBuffRefreshed?.Invoke(owner, new BuffRefreshedEventArgs(buff));
         }
         
         internal void TriggerExpired(IBuff buff)
         {
-            OnBuffExpired?.Invoke(_owner, new BuffExpiredEventArgs(buff));
+            OnBuffExpired?.Invoke(owner, new BuffExpiredEventArgs(buff));
         }
         
         internal void TriggerCleared()
         {
-            OnBuffCleared?.Invoke(_owner, EventArgs.Empty);
+            OnBuffCleared?.Invoke(owner, EventArgs.Empty);
         }
     }
     
