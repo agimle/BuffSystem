@@ -56,5 +56,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "BuffSystem.sln"
+    "dotnet.defaultSolution": "BuffSystem.sln",
+    "dotnet.preferCSharpExtension": true
 }
