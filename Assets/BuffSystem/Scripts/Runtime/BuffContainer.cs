@@ -1,0 +1,399 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using BuffSystem.Core;
+using BuffSystem.Events;
+using BuffSystem.Utils;
+
+namespace BuffSystem.Runtime
+{
+    /// <summary>
+    /// Buff容器 - 管理持有者的所有Buff
+    /// </summary>
+    public class BuffContainer : IBuffContainer
+    {
+        // Buff存储
+        private readonly Dictionary<int, BuffEntity> _buffByInstanceId = new();
+        private readonly Dictionary<int, List<BuffEntity>> _buffsByDataId = new();
+        private readonly Dictionary<object, List<BuffEntity>> _buffsBySource = new();
+
+        // 待移除队列
+        private readonly Queue<int> _removalQueue = new();
+
+        // 对象池
+        private readonly ObjectPool<BuffEntity> _buffPool;
+
+        // Buff列表缓存（避免GC）
+        private readonly List<IBuff> _buffCache = new();
+
+        // 所属持有者
+        public IBuffOwner Owner { get; }
+
+        /// <summary>
+        /// 所有Buff（只读）
+        /// </summary>
+        public IReadOnlyCollection<IBuff> AllBuffs
+        {
+            get
+            {
+                _buffCache.Clear();
+                foreach (var buff in _buffByInstanceId.Values)
+                {
+                    _buffCache.Add(buff);
+                }
+                return _buffCache;
+            }
+        }
+        
+        /// <summary>
+        /// 当前Buff数量
+        /// </summary>
+        public int Count => _buffByInstanceId.Count;
+        
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        public BuffContainer(IBuffOwner owner)
+        {
+            Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            
+            var config = Data.BuffSystemConfig.Instance;
+            _buffPool = new ObjectPool<BuffEntity>(
+                createFunc: CreateBuffEntity,
+                actionOnGet: null,
+                actionOnRelease: ReleaseBuffEntity,
+                defaultCapacity: config.DefaultPoolCapacity,
+                maxSize: config.MaxPoolSize
+            );
+        }
+        
+        #region Buff Management
+        
+        /// <summary>
+        /// 添加Buff
+        /// </summary>
+        public IBuff AddBuff(IBuffData data, object source = null)
+        {
+            if (data == null)
+            {
+                Debug.LogError("[BuffContainer] 尝试添加空的Buff数据");
+                return null;
+            }
+            
+            // 处理唯一性
+            if (data.IsUnique)
+            {
+                var existingBuff = GetUniqueBuff(data.Id);
+                if (existingBuff != null)
+                {
+                    // 已存在，执行叠加或刷新逻辑
+                    return HandleExistingBuff(existingBuff, data, source);
+                }
+            }
+            
+            // 创建新Buff
+            return CreateNewBuff(data, source);
+        }
+        
+        /// <summary>
+        /// 获取唯一Buff（用于IsUnique的Buff）
+        /// </summary>
+        private BuffEntity GetUniqueBuff(int dataId)
+        {
+            if (_buffsByDataId.TryGetValue(dataId, out var buffs) && buffs.Count > 0)
+            {
+                return buffs[0];
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// 处理已存在的Buff
+        /// </summary>
+        private IBuff HandleExistingBuff(BuffEntity existingBuff, IBuffData data, object source)
+        {
+            switch (data.StackMode)
+            {
+                case BuffStackMode.Stackable:
+                    // 可叠加 - 增加层数
+                    existingBuff.AddStack(data.AddStackCount);
+                    break;
+                    
+                case BuffStackMode.None:
+                    // 不可叠加 - 刷新持续时间
+                    if (data.CanRefresh)
+                    {
+                        existingBuff.RefreshDuration();
+                    }
+                    break;
+                    
+                case BuffStackMode.Independent:
+                    // 独立模式 - 创建新实例（忽略唯一性）
+                    return CreateNewBuff(data, source);
+            }
+            
+            return existingBuff;
+        }
+        
+        /// <summary>
+        /// 创建新Buff实例
+        /// </summary>
+        private IBuff CreateNewBuff(IBuffData data, object source)
+        {
+            // 从对象池获取
+            BuffEntity buff = _buffPool.Get();
+            buff.Reset(data, Owner, source);
+            
+            // 存储
+            _buffByInstanceId[buff.InstanceId] = buff;
+            
+            if (!_buffsByDataId.TryGetValue(data.Id, out var dataIdList))
+            {
+                dataIdList = new List<BuffEntity>();
+                _buffsByDataId[data.Id] = dataIdList;
+            }
+            dataIdList.Add(buff);
+            
+            if (source != null)
+            {
+                if (!_buffsBySource.TryGetValue(source, out var sourceList))
+                {
+                    sourceList = new List<BuffEntity>();
+                    _buffsBySource[source] = sourceList;
+                }
+                sourceList.Add(buff);
+            }
+            
+            // 触发获得事件
+            if (buff.Data.CreateLogic() is IBuffAcquire acquireLogic)
+            {
+                acquireLogic.OnAcquire();
+            }
+            
+            // 触发全局事件
+            BuffEventSystem.TriggerBuffAdded(buff);
+            Owner.OnBuffEvent(BuffEventType.Added, buff);
+            
+            if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+            {
+                Debug.Log($"[BuffContainer] 添加Buff: {buff}");
+            }
+            
+            return buff;
+        }
+        
+        /// <summary>
+        /// 移除Buff
+        /// </summary>
+        public void RemoveBuff(IBuff buff)
+        {
+            if (buff is BuffEntity entity)
+            {
+                entity.MarkForRemoval();
+                _removalQueue.Enqueue(entity.InstanceId);
+            }
+        }
+        
+        /// <summary>
+        /// 根据ID移除Buff
+        /// </summary>
+        public void RemoveBuff(int dataId)
+        {
+            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            {
+                foreach (var buff in buffs.ToList())
+                {
+                    RemoveBuff(buff);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 根据来源移除Buff
+        /// </summary>
+        public void RemoveBuffBySource(object source)
+        {
+            if (source == null) return;
+            
+            if (_buffsBySource.TryGetValue(source, out var buffs))
+            {
+                foreach (var buff in buffs.ToList())
+                {
+                    RemoveBuff(buff);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 清空所有Buff
+        /// </summary>
+        public void ClearAllBuffs()
+        {
+            foreach (var buff in _buffByInstanceId.Values.ToList())
+            {
+                RemoveBuff(buff);
+            }
+            
+            // 立即处理移除队列
+            ProcessRemovalQueue();
+            
+            Owner.OnBuffEvent(BuffEventType.Cleared, null);
+        }
+        
+        #endregion
+        
+        #region Query Methods
+        
+        /// <summary>
+        /// 获取Buff
+        /// </summary>
+        public IBuff GetBuff(int dataId, object source = null)
+        {
+            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            {
+                if (source == null)
+                {
+                    return buffs.FirstOrDefault();
+                }
+                
+                return buffs.FirstOrDefault(b => b.Source == source);
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// 获取所有指定ID的Buff
+        /// </summary>
+        public IEnumerable<IBuff> GetBuffs(int dataId)
+        {
+            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            {
+                return buffs.Cast<IBuff>();
+            }
+            return Enumerable.Empty<IBuff>();
+        }
+        
+        /// <summary>
+        /// 获取所有指定来源的Buff
+        /// </summary>
+        public IEnumerable<IBuff> GetBuffsBySource(object source)
+        {
+            if (source != null && _buffsBySource.TryGetValue(source, out var buffs))
+            {
+                return buffs.Cast<IBuff>();
+            }
+            return Enumerable.Empty<IBuff>();
+        }
+        
+        /// <summary>
+        /// 是否拥有指定Buff
+        /// </summary>
+        public bool HasBuff(int dataId)
+        {
+            return _buffsByDataId.ContainsKey(dataId) && _buffsByDataId[dataId].Count > 0;
+        }
+        
+        /// <summary>
+        /// 是否拥有指定来源的Buff
+        /// </summary>
+        public bool HasBuff(int dataId, object source)
+        {
+            if (_buffsByDataId.TryGetValue(dataId, out var buffs))
+            {
+                return buffs.Any(b => b.Source == source);
+            }
+            return false;
+        }
+        
+        #endregion
+        
+        #region Update
+        
+        /// <summary>
+        /// 每帧更新
+        /// </summary>
+        public void Update(float deltaTime)
+        {
+            // 更新所有Buff
+            foreach (var buff in _buffByInstanceId.Values)
+            {
+                buff.Update(deltaTime);
+                
+                if (buff.IsMarkedForRemoval && !_removalQueue.Contains(buff.InstanceId))
+                {
+                    _removalQueue.Enqueue(buff.InstanceId);
+                }
+            }
+            
+            // 处理移除队列
+            ProcessRemovalQueue();
+        }
+        
+        /// <summary>
+        /// 处理移除队列
+        /// </summary>
+        private void ProcessRemovalQueue()
+        {
+            while (_removalQueue.Count > 0)
+            {
+                int instanceId = _removalQueue.Dequeue();
+                
+                if (!_buffByInstanceId.TryGetValue(instanceId, out var buff))
+                {
+                    continue;
+                }
+                
+                // 从存储中移除
+                _buffByInstanceId.Remove(instanceId);
+                
+                if (_buffsByDataId.TryGetValue(buff.DataId, out var dataIdList))
+                {
+                    dataIdList.Remove(buff);
+                    if (dataIdList.Count == 0)
+                    {
+                        _buffsByDataId.Remove(buff.DataId);
+                    }
+                }
+                
+                if (buff.Source != null && _buffsBySource.TryGetValue(buff.Source, out var sourceList))
+                {
+                    sourceList.Remove(buff);
+                    if (sourceList.Count == 0)
+                    {
+                        _buffsBySource.Remove(buff.Source);
+                    }
+                }
+                
+                // 触发事件
+                BuffEventSystem.TriggerBuffRemoved(buff);
+                Owner.OnBuffEvent(BuffEventType.Removed, buff);
+                
+                // 清理并归还对象池
+                buff.Cleanup();
+                _buffPool.Release(buff);
+                
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                {
+                    Debug.Log($"[BuffContainer] 移除Buff: {buff.Name}");
+                }
+            }
+        }
+        
+        #endregion
+        
+        #region Object Pool Callbacks
+        
+        private BuffEntity CreateBuffEntity()
+        {
+            return new BuffEntity();
+        }
+        
+        private void ReleaseBuffEntity(BuffEntity buff)
+        {
+            // 清理工作已在Cleanup中完成
+        }
+        
+        #endregion
+    }
+}

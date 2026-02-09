@@ -1,0 +1,26 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+Astral Ravine/Assets/ArtResource
+星壑：AstralRavine
+
+# Visual Studio / Rider
+.vs/
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.suo
+*.tmp
+*.pidb
+*.booproj
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
