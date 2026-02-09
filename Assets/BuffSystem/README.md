@@ -42,17 +42,23 @@ owner.AddBuff("燃烧"); // 通过名称
 ```csharp
 using BuffSystem.Core;
 
+// 初始化Buff系统（首次使用时自动初始化）
+BuffApi.Initialize();
+
 // 添加Buff
-BuffAPI.AddBuff(1001, owner);
-BuffAPI.AddBuff("燃烧", owner, damageSource);
+BuffApi.AddBuff(1001, owner);
+BuffApi.AddBuff("燃烧", owner, damageSource);
 
 // 查询Buff
-bool hasBuff = BuffAPI.HasBuff(1001, owner);
-IBuff buff = BuffAPI.GetBuff(1001, owner);
+bool hasBuff = BuffApi.HasBuff(1001, owner);
+IBuff buff = BuffApi.GetBuff(1001, owner);
 
 // 移除Buff
-BuffAPI.RemoveBuff(1001, owner);
-BuffAPI.ClearBuffs(owner);
+BuffApi.RemoveBuff(1001, owner);
+BuffApi.ClearBuffs(owner);
+
+// 重新加载Buff数据
+BuffApi.ReloadData();
 ```
 
 ## 目录结构
@@ -86,6 +92,60 @@ public interface IBuffOwner
 }
 ```
 
+### IBuffContainer - Buff容器
+
+管理Buff的添加、移除、查询：
+
+```csharp
+public interface IBuffContainer
+{
+    IBuffOwner Owner { get; }
+    IReadOnlyCollection<IBuff> AllBuffs { get; }
+    IBuff AddBuff(IBuffData data, object source = null);
+    void RemoveBuff(IBuff buff);
+    void RemoveBuff(int dataId);
+    void RemoveBuffBySource(object source);
+    void ClearAllBuffs();
+    IBuff GetBuff(int dataId, object source = null);
+    IEnumerable<IBuff> GetBuffs(int dataId);
+    IEnumerable<IBuff> GetBuffsBySource(object source);
+    bool HasBuff(int dataId);
+    bool HasBuff(int dataId, object source);
+    void Update(float deltaTime);
+}
+```
+
+### IBuff - Buff实例
+
+运行时Buff实体的抽象：
+
+```csharp
+public interface IBuff
+{
+    int InstanceId { get; }
+    int DataId { get; }
+    string Name { get; }
+    int CurrentStack { get; }
+    int MaxStack { get; }
+    float Duration { get; }
+    float TotalDuration { get; }
+    float RemainingTime { get; }
+    bool IsPermanent { get; }
+    bool IsMarkedForRemoval { get; }
+    object Source { get; }
+    int SourceId { get; }
+    IBuffOwner Owner { get; }
+    IBuffData Data { get; }
+    T GetSource<T>() where T : class;
+    bool TryGetSource<T>(out T source) where T : class;
+    void AddStack(int amount);
+    void RemoveStack(int amount);
+    void RefreshDuration();
+    void MarkForRemoval();
+    void Reset(IBuffData data, IBuffOwner owner, object source);
+}
+```
+
 ### IBuffData - Buff数据
 
 Buff的配置数据，使用ScriptableObject实现：
@@ -95,9 +155,19 @@ public interface IBuffData
 {
     int Id { get; }
     string Name { get; }
-    float Duration { get; }
+    string Description { get; }
+    BuffEffectType EffectType { get; }
+    bool IsUnique { get; }
     BuffStackMode StackMode { get; }
-    // ...
+    int MaxStack { get; }
+    int AddStackCount { get; }
+    bool IsPermanent { get; }
+    float Duration { get; }
+    bool CanRefresh { get; }
+    BuffRemoveMode RemoveMode { get; }
+    int RemoveStackCount { get; }
+    float RemoveInterval { get; }
+    IBuffLogic CreateLogic();
 }
 ```
 
@@ -161,6 +231,26 @@ buffOwner.LocalEvents.OnBuffAdded += (sender, e) => {
 };
 ```
 
+### Buff事件接收
+
+持有者可以实现 `IBuffEventReceiver` 接口来接收Buff发送的事件：
+
+```csharp
+public class Character : MonoBehaviour, IBuffOwner, IBuffEventReceiver
+{
+    // ...
+    
+    public void OnBuffEvent(IBuff buff, string eventName, object data)
+    {
+        // 处理Buff发送的事件
+        if (eventName == "Stun")
+        {
+            // 处理眩晕效果
+        }
+    }
+}
+```
+
 ## 纯代码使用
 
 不依赖MonoBehaviour的使用方式：
@@ -194,7 +284,7 @@ public class GameCharacter : IBuffOwner
 
 // 使用
 var character = new GameCharacter("Player");
-BuffAPI.AddBuff(1001, character);
+BuffApi.AddBuff(1001, character);
 ```
 
 ## 配置说明
@@ -210,9 +300,14 @@ BuffAPI.AddBuff(1001, character);
 | 唯一性 | 同类型是否只能存在一个 |
 | 叠加模式 | None/Stackable/Independent |
 | 最大层数 | Buff最高可叠加层数 |
+| 每层添加数量 | 每次添加时增加的层数 |
+| 是否永久 | 是否为永久Buff |
 | 持续时间 | Buff持续时间（秒） |
 | 可刷新 | 重新添加时是否刷新时间 |
 | 移除模式 | Remove（直接移除）/Reduce（逐层移除） |
+| 每层移除数量 | 每次移除时减少的层数 |
+| 移除间隔 | 逐层移除时的间隔时间（秒） |
+| 逻辑脚本 | Buff的自定义逻辑脚本 |
 
 ### BuffSystemConfig 全局配置
 
@@ -242,6 +337,9 @@ public class StunBuffLogic : BuffLogicBase, IBuffAcquire, IBuffRemove
         {
             controller.IsStunned = true;
         }
+        
+        // 发送事件给持有者
+        SendEvent("Stun", true);
     }
     
     public void OnRemove()
@@ -251,8 +349,36 @@ public class StunBuffLogic : BuffLogicBase, IBuffAcquire, IBuffRemove
         {
             controller.IsStunned = false;
         }
+        
+        // 发送事件给持有者
+        SendEvent("Stun", false);
     }
 }
+```
+
+### 高级API使用
+
+```csharp
+// 获取Buff数据
+IBuffData buffData = BuffApi.GetBuffData(1001);
+
+// 检查Buff数据是否存在
+if (BuffApi.HasBuffData("燃烧"))
+{
+    // Buff数据存在
+}
+
+// 获取所有Buff数据
+IEnumerable<IBuffData> allBuffs = BuffApi.GetAllBuffData();
+
+// 增加Buff层数
+BuffApi.AddStack(buff, 1);
+
+// 减少Buff层数
+BuffApi.RemoveStack(buff, 1);
+
+// 刷新Buff持续时间
+BuffApi.RefreshBuff(buff);
 ```
 
 ## 许可证
