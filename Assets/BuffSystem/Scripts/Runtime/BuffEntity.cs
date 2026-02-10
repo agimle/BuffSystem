@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Events;
@@ -18,6 +19,7 @@ namespace BuffSystem.Runtime
         private IBuffData data;
         private IBuffOwner owner;
         private object source;
+        private int sourceId;
         
         // 运行时数据
         private int currentStack;
@@ -67,19 +69,22 @@ namespace BuffSystem.Runtime
             data = newData ?? throw new ArgumentNullException(nameof(newData));
             owner = newOwner ?? throw new ArgumentNullException(nameof(newOwner));
             source = newSource;
-            
+
+            // 计算SourceId（使用RuntimeHelpers.GetHashCode确保稳定性）
+            sourceId = source != null ? RuntimeHelpers.GetHashCode(source) : 0;
+
             currentStack = 0;
             duration = 0f;
             removeIntervalTimer = 0f;
             isMarkedForRemoval = false;
-            
+
             // 创建逻辑实例
             logic = data.CreateLogic();
             logic?.Initialize(this);
-            
+
             // 初始层数
             AddStack(data.AddStackCount);
-            
+
             // 触发开始事件
             if (logic is IBuffStart startLogic)
             {
@@ -275,7 +280,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         private bool CanRefresh => data?.CanRefresh ?? false;
 
-        public int SourceId => source?.GetHashCode() ?? 0;
+        public int SourceId => sourceId;
 
         public override string ToString()
         {

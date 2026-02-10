@@ -8,7 +8,7 @@ namespace BuffSystem.Core
     /// 支持序列化，可在Inspector中配置
     /// </summary>
     [Serializable]
-    public abstract class BuffLogicBase : IBuffLogic
+    public abstract class BuffLogicBase : IBuffLogic, ICloneable
     {
         [NonSerialized] private IBuff buff;
 
@@ -16,7 +16,7 @@ namespace BuffSystem.Core
         /// 所属的Buff实例
         /// </summary>
         public IBuff Buff => buff;
-        
+
         /// <summary>
         /// 所属Buff的持有者
         /// </summary>
@@ -26,13 +26,31 @@ namespace BuffSystem.Core
         /// Buff来源
         /// </summary>
         protected object Source => buff?.Source;
-        
+
         /// <summary>
         /// 当前层数
         /// </summary>
         protected int CurrentStack => buff?.CurrentStack ?? 0;
 
         IBuff IBuffLogic.Buff { get => buff; set => buff = value; }
+
+        /// <summary>
+        /// 创建克隆实例
+        /// </summary>
+        public object Clone()
+        {
+            var clone = (BuffLogicBase)MemberwiseClone();
+            clone.ResetInternalState();
+            return clone;
+        }
+
+        /// <summary>
+        /// 重置内部状态（子类可重写以重置运行时数据）
+        /// </summary>
+        protected virtual void ResetInternalState()
+        {
+            buff = null;
+        }
         
         /// <summary>
         /// 初始化

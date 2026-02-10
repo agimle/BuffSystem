@@ -68,12 +68,9 @@ namespace BuffSystem.Data
             {
                 return new EmptyBuffLogic();
             }
-            
-            // 通过序列化/反序列化创建深拷贝
-            string json = JsonUtility.ToJson(buffLogicInstance);
-            BuffLogicBase clone = (BuffLogicBase)System.Activator.CreateInstance(buffLogicInstance.GetType());
-            JsonUtility.FromJsonOverwrite(json, clone);
-            return clone;
+
+            // 使用原型模式进行克隆（性能优于Json序列化）
+            return (IBuffLogic)buffLogicInstance.Clone();
         }
         
         #endregion

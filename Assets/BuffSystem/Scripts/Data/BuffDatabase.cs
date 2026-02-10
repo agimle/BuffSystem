@@ -17,6 +17,10 @@ namespace BuffSystem.Data
         private readonly Dictionary<string, int> nameToId = new();
         private bool isInitialized;
 
+        // 线程安全锁
+        private readonly object initLock = new();
+        private readonly object dataLock = new();
+
         private BuffDatabase()
         {
         }
@@ -28,10 +32,15 @@ namespace BuffSystem.Data
         {
             if (isInitialized) return;
 
-            LoadAllBuffData();
-            isInitialized = true;
+            lock (initLock)
+            {
+                if (isInitialized) return;
 
-            Debug.Log($"[BuffDatabase] 初始化完成，加载了 {idToData.Count} 个Buff配置");
+                LoadAllBuffData();
+                isInitialized = true;
+
+                Debug.Log($"[BuffDatabase] 初始化完成，加载了 {idToData.Count} 个Buff配置");
+            }
         }
 
         /// <summary>
@@ -39,9 +48,17 @@ namespace BuffSystem.Data
         /// </summary>
         public void Reload()
         {
-            idToData.Clear();
-            nameToId.Clear();
-            isInitialized = false;
+            lock (dataLock)
+            {
+                idToData.Clear();
+                nameToId.Clear();
+            }
+
+            lock (initLock)
+            {
+                isInitialized = false;
+            }
+
             Initialize();
         }
 
@@ -76,23 +93,26 @@ namespace BuffSystem.Data
         {
             if (data == null) return;
 
-            if (idToData.ContainsKey(data.Id))
+            lock (dataLock)
             {
-                Debug.LogWarning($"[BuffDatabase] Buff ID重复: {data.Id} - {data.Name}");
-                return;
-            }
-
-            idToData[data.Id] = data;
-
-            if (!string.IsNullOrEmpty(data.Name))
-            {
-                if (nameToId.ContainsKey(data.Name))
+                if (idToData.ContainsKey(data.Id))
                 {
-                    Debug.LogWarning($"[BuffDatabase] Buff名称重复: {data.Name}");
+                    Debug.LogWarning($"[BuffDatabase] Buff ID重复: {data.Id} - {data.Name}");
+                    return;
                 }
-                else
+
+                idToData[data.Id] = data;
+
+                if (!string.IsNullOrEmpty(data.Name))
                 {
-                    nameToId[data.Name] = data.Id;
+                    if (nameToId.ContainsKey(data.Name))
+                    {
+                        Debug.LogWarning($"[BuffDatabase] Buff名称重复: {data.Name}");
+                    }
+                    else
+                    {
+                        nameToId[data.Name] = data.Id;
+                    }
                 }
             }
         }
@@ -103,8 +123,11 @@ namespace BuffSystem.Data
         public IBuffData GetBuffData(int id)
         {
             EnsureInitialized();
-            idToData.TryGetValue(id, out var data);
-            return data;
+            lock (dataLock)
+            {
+                idToData.TryGetValue(id, out var data);
+                return data;
+            }
         }
 
         /// <summary>
@@ -113,9 +136,12 @@ namespace BuffSystem.Data
         public IBuffData GetBuffData(string name)
         {
             EnsureInitialized();
-            if (nameToId.TryGetValue(name, out int id))
+            lock (dataLock)
             {
-                return GetBuffData(id);
+                if (nameToId.TryGetValue(name, out int id))
+                {
+                    return GetBuffData(id);
+                }
             }
 
             return null;
@@ -127,7 +153,10 @@ namespace BuffSystem.Data
         public int GetBuffId(string name)
         {
             EnsureInitialized();
-            return nameToId.TryGetValue(name, out int id) ? id : -1;
+            lock (dataLock)
+            {
+                return nameToId.TryGetValue(name, out int id) ? id : -1;
+            }
         }
 
         /// <summary>
@@ -136,7 +165,10 @@ namespace BuffSystem.Data
         public bool ContainsBuff(int id)
         {
             EnsureInitialized();
-            return idToData.ContainsKey(id);
+            lock (dataLock)
+            {
+                return idToData.ContainsKey(id);
+            }
         }
 
         /// <summary>
@@ -145,7 +177,10 @@ namespace BuffSystem.Data
         public bool ContainsBuff(string name)
         {
             EnsureInitialized();
-            return nameToId.ContainsKey(name);
+            lock (dataLock)
+            {
+                return nameToId.ContainsKey(name);
+            }
         }
 
         /// <summary>
@@ -154,7 +189,10 @@ namespace BuffSystem.Data
         public IEnumerable<IBuffData> GetAllBuffData()
         {
             EnsureInitialized();
-            return idToData.Values;
+            lock (dataLock)
+            {
+                return new List<IBuffData>(idToData.Values);
+            }
         }
 
         /// <summary>
@@ -165,7 +203,10 @@ namespace BuffSystem.Data
             get
             {
                 EnsureInitialized();
-                return idToData.Count;
+                lock (dataLock)
+                {
+                    return idToData.Count;
+                }
             }
         }
 
