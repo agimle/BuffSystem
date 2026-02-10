@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace BuffSystem.Core
 {
     /// <summary>
@@ -76,6 +78,16 @@ namespace BuffSystem.Core
         float RemoveInterval { get; }
         
         /// <summary>
+        /// 标签列表
+        /// </summary>
+        IReadOnlyList<string> Tags { get; }
+        
+        /// <summary>
+        /// 是否拥有指定标签
+        /// </summary>
+        bool HasTag(string tag);
+        
+        /// <summary>
         /// 创建Buff逻辑实例
         /// </summary>
         IBuffLogic CreateLogic();
@@ -127,5 +139,26 @@ namespace BuffSystem.Core
         /// 逐层移除
         /// </summary>
         Reduce = 1
+    }
+    
+    /// <summary>
+    /// 互斥优先级
+    /// </summary>
+    public enum MutexPriority
+    {
+        /// <summary>
+        /// 阻止新Buff添加
+        /// </summary>
+        BlockNew = 0,
+        
+        /// <summary>
+        /// 替换已有Buff
+        /// </summary>
+        ReplaceOthers = 1,
+        
+        /// <summary>
+        /// 允许共存（仅标记关系）
+        /// </summary>
+        Coexist = 2
     }
 }

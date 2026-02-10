@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Core;
 
@@ -35,6 +36,21 @@ namespace BuffSystem.Data
         [SerializeField] private int removeStackCount = 1;
         [SerializeField] private float removeInterval = 0f;
         
+        [Header("条件设置")]
+        [SerializeReference, SubclassSelector]
+        private List<IBuffCondition> addConditions = new();
+        
+        [SerializeReference, SubclassSelector]
+        private List<IBuffCondition> maintainConditions = new();
+        
+        [Header("关系设置")]
+        [SerializeField] private List<int> mutexBuffIds = new(); // 互斥Buff IDs
+        [SerializeField] private List<int> dependBuffIds = new(); // 依赖Buff IDs
+        [SerializeField] private MutexPriority mutexPriority = MutexPriority.ReplaceOthers;
+        
+        [Header("标签")]
+        [SerializeField] private List<string> tags = new();
+        
         [Header("逻辑脚本")]
         #if UNITY_EDITOR
         [SerializeField] private MonoScript buffLogicScript;
@@ -58,6 +74,41 @@ namespace BuffSystem.Data
         public BuffRemoveMode RemoveMode => removeMode;
         public int RemoveStackCount => removeStackCount;
         public float RemoveInterval => removeInterval;
+        
+        /// <summary>
+        /// 添加条件列表
+        /// </summary>
+        public IReadOnlyList<IBuffCondition> AddConditions => addConditions;
+        
+        /// <summary>
+        /// 维持条件列表
+        /// </summary>
+        public IReadOnlyList<IBuffCondition> MaintainConditions => maintainConditions;
+        
+        /// <summary>
+        /// 互斥Buff ID列表
+        /// </summary>
+        public IReadOnlyList<int> MutexBuffIds => mutexBuffIds;
+        
+        /// <summary>
+        /// 依赖Buff ID列表
+        /// </summary>
+        public IReadOnlyList<int> DependBuffIds => dependBuffIds;
+        
+        /// <summary>
+        /// 互斥优先级
+        /// </summary>
+        public MutexPriority MutexPriority => mutexPriority;
+        
+        /// <summary>
+        /// 标签列表
+        /// </summary>
+        public IReadOnlyList<string> Tags => tags;
+        
+        /// <summary>
+        /// 是否拥有指定标签
+        /// </summary>
+        public bool HasTag(string tag) => tags.Contains(tag);
         
         /// <summary>
         /// 创建Buff逻辑实例（深拷贝）

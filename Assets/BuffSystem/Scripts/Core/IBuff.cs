@@ -54,7 +54,12 @@ namespace BuffSystem.Core
         /// 是否标记为移除
         /// </summary>
         bool IsMarkedForRemoval { get; }
-        
+
+        /// <summary>
+        /// 是否处于激活状态
+        /// </summary>
+        bool IsActive { get; }
+
         /// <summary>
         /// Buff来源（可以是技能、道具、角色、环境等）
         /// </summary>

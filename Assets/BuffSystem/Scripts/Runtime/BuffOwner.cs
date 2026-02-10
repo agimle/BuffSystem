@@ -162,6 +162,43 @@ namespace BuffSystem.Runtime
             }
         }
 
+        /// <summary>
+        /// 分批更新BuffOwner
+        /// </summary>
+        /// <param name="deltaTime">时间增量</param>
+        /// <param name="batchIndex">当前批次索引</param>
+        /// <param name="totalBatches">总批次数量</param>
+        internal static void UpdateBatch(float deltaTime, int batchIndex, int totalBatches)
+        {
+            if (totalBatches <= 1)
+            {
+                UpdateAll(deltaTime);
+                return;
+            }
+
+            // 分批更新：从batchIndex开始，每次跳过totalBatches个
+            for (int i = batchIndex; i < allOwners.Count; i += totalBatches)
+            {
+                var owner = allOwners[i];
+                if (owner == null) continue;
+
+                if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
+                {
+                    owner.buffContainer.Update(deltaTime);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取所有活跃持有者的数量
+        /// </summary>
+        internal static int ActiveOwnerCount => allOwners.Count;
+
+        /// <summary>
+        /// 获取所有Buff持有者（只读）
+        /// </summary>
+        public static IReadOnlyList<BuffOwner> AllOwners => allOwners;
+
         #endregion
         
         #region Initialization
@@ -178,6 +215,13 @@ namespace BuffSystem.Runtime
             
             // 初始化Buff系统
             BuffApi.Initialize();
+            
+            // 预热对象池
+            var config = Data.BuffSystemConfig.Instance;
+            if (config.PrewarmOnInitialize && config.PrewarmCount > 0)
+            {
+                buffContainer.Prewarm(config.PrewarmCount);
+            }
             
             if (showDebugInfo)
             {
