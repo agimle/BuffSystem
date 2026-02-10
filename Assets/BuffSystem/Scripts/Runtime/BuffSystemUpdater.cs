@@ -18,6 +18,9 @@ namespace BuffSystem.Runtime
         private float updateTimer;
         private static BuffSystemUpdater instance;
 
+        // 线程安全锁
+        private static readonly object instanceLock = new();
+
         /// <summary>
         /// 当前更新模式
         /// </summary>
@@ -37,26 +40,36 @@ namespace BuffSystem.Runtime
 
         private static void CreateInstance()
         {
-            var go = new GameObject("BuffSystemUpdater");
-            instance = go.AddComponent<BuffSystemUpdater>();
-            DontDestroyOnLoad(go);
+            if (instance != null) return;
+
+            lock (instanceLock)
+            {
+                if (instance != null) return;
+
+                var go = new GameObject("BuffSystemUpdater");
+                instance = go.AddComponent<BuffSystemUpdater>();
+                DontDestroyOnLoad(go);
+            }
         }
 
         private void Awake()
         {
-            if (instance != null && instance != this)
+            lock (instanceLock)
             {
-                Destroy(gameObject);
-                return;
+                if (instance != null && instance != this)
+                {
+                    Destroy(gameObject);
+                    return;
+                }
+
+                instance = this;
+                DontDestroyOnLoad(gameObject);
+
+                // 加载配置
+                var config = BuffSystemConfig.Instance;
+                updateMode = config.UpdateMode;
+                updateInterval = config.UpdateInterval;
             }
-
-            instance = this;
-            DontDestroyOnLoad(gameObject);
-
-            // 加载配置
-            var config = BuffSystemConfig.Instance;
-            updateMode = config.UpdateMode;
-            updateInterval = config.UpdateInterval;
         }
 
         private void Update()
