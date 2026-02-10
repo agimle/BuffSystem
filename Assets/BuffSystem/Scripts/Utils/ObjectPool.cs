@@ -10,29 +10,29 @@ namespace BuffSystem.Utils
     /// </summary>
     public class ObjectPool<T> where T : class, new()
     {
-        private readonly Stack<T> _stack;
-        private readonly Func<T> _createFunc;
-        private readonly Action<T> _actionOnGet;
-        private readonly Action<T> _actionOnRelease;
-        private readonly Action<T> _actionOnDestroy;
-        private readonly int _maxSize;
+        private readonly Stack<T> stack;
+        private readonly Func<T> createFunc;
+        private readonly Action<T> actionOnGet;
+        private readonly Action<T> actionOnRelease;
+        private readonly Action<T> actionOnDestroy;
+        private readonly int maxSize;
 
-        private int _countAll;
+        private int countAll;
 
         /// <summary>
         /// 池中对象总数（已分配 + 可用）
         /// </summary>
-        public int CountAll => _countAll;
+        public int CountAll => countAll;
 
         /// <summary>
         /// 池中可用对象数
         /// </summary>
-        public int CountInactive => _stack.Count;
+        public int CountInactive => stack.Count;
 
         /// <summary>
         /// 正在使用的对象数
         /// </summary>
-        public int CountActive => _countAll - _stack.Count;
+        public int CountActive => countAll - stack.Count;
 
         /// <summary>
         /// 构造函数
@@ -45,13 +45,13 @@ namespace BuffSystem.Utils
             int defaultCapacity = 10,
             int maxSize = 100)
         {
-            _createFunc = createFunc ?? (() => new T());
-            _actionOnGet = actionOnGet;
-            _actionOnRelease = actionOnRelease;
-            _actionOnDestroy = actionOnDestroy;
-            _maxSize = maxSize;
+            this.createFunc = createFunc ?? (() => new T());
+            this.actionOnGet = actionOnGet;
+            this.actionOnRelease = actionOnRelease;
+            this.actionOnDestroy = actionOnDestroy;
+            this.maxSize = maxSize;
 
-            _stack = new Stack<T>(defaultCapacity);
+            stack = new Stack<T>(defaultCapacity);
         }
 
         /// <summary>
@@ -61,17 +61,17 @@ namespace BuffSystem.Utils
         {
             T element;
 
-            if (_stack.Count == 0)
+            if (stack.Count == 0)
             {
-                element = _createFunc();
-                _countAll++;
+                element = createFunc();
+                countAll++;
             }
             else
             {
-                element = _stack.Pop();
+                element = stack.Pop();
             }
 
-            _actionOnGet?.Invoke(element);
+            actionOnGet?.Invoke(element);
             return element;
         }
 
@@ -95,15 +95,15 @@ namespace BuffSystem.Utils
                 return;
             }
 
-            _actionOnRelease?.Invoke(element);
+            actionOnRelease?.Invoke(element);
 
-            if (_stack.Count < _maxSize)
+            if (stack.Count < maxSize)
             {
-                _stack.Push(element);
+                stack.Push(element);
             }
             else
             {
-                _actionOnDestroy?.Invoke(element);
+                actionOnDestroy?.Invoke(element);
             }
         }
 
@@ -112,16 +112,16 @@ namespace BuffSystem.Utils
         /// </summary>
         public void Clear()
         {
-            if (_actionOnDestroy != null)
+            if (actionOnDestroy != null)
             {
-                foreach (var item in _stack)
+                foreach (var item in stack)
                 {
-                    _actionOnDestroy(item);
+                    actionOnDestroy(item);
                 }
             }
 
-            _stack.Clear();
-            _countAll = 0;
+            stack.Clear();
+            countAll = 0;
         }
     }
 
