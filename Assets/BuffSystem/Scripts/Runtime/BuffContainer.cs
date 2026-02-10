@@ -26,6 +26,8 @@ namespace BuffSystem.Runtime
 
         // Buff列表缓存（避免GC）
         private readonly List<IBuff> buffCache = new();
+        private IReadOnlyCollection<IBuff> allBuffsReadOnly;
+        private bool isAllBuffsCacheValid;
 
         // 所属持有者
         public IBuffOwner Owner { get; }
@@ -37,13 +39,26 @@ namespace BuffSystem.Runtime
         {
             get
             {
-                buffCache.Clear();
-                foreach (var buff in buffByInstanceId.Values)
+                if (!isAllBuffsCacheValid)
                 {
-                    buffCache.Add(buff);
+                    buffCache.Clear();
+                    foreach (var buff in buffByInstanceId.Values)
+                    {
+                        buffCache.Add(buff);
+                    }
+                    allBuffsReadOnly = buffCache.AsReadOnly();
+                    isAllBuffsCacheValid = true;
                 }
-                return buffCache;
+                return allBuffsReadOnly;
             }
+        }
+
+        /// <summary>
+        /// 使AllBuffs缓存失效
+        /// </summary>
+        private void InvalidateAllBuffsCache()
+        {
+            isAllBuffsCacheValid = false;
         }
         
         /// <summary>
@@ -174,12 +189,15 @@ namespace BuffSystem.Runtime
             // 触发全局事件
             BuffEventSystem.TriggerBuffAdded(buff);
             Owner.OnBuffEvent(BuffEventType.Added, buff);
-            
+
+            // 使缓存失效
+            InvalidateAllBuffsCache();
+
             if (Data.BuffSystemConfig.Instance.EnableDebugLog)
             {
                 Debug.Log($"[BuffContainer] 添加Buff: {buff}");
             }
-            
+
             return buff;
         }
         
@@ -372,11 +390,17 @@ namespace BuffSystem.Runtime
                 // 清理并归还对象池
                 buff.Cleanup();
                 buffPool.Release(buff);
-                
+
                 if (Data.BuffSystemConfig.Instance.EnableDebugLog)
                 {
                     Debug.Log($"[BuffContainer] 移除Buff: {buff.Name}");
                 }
+            }
+
+            // 使缓存失效
+            if (removalQueue.Count == 0)
+            {
+                InvalidateAllBuffsCache();
             }
         }
         
