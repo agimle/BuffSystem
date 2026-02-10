@@ -32,6 +32,10 @@ namespace BuffSystem.Editor
         private bool _showDurationSettings = true;
         private bool _showRemoveSettings = true;
         private bool _showLogicSettings = true;
+
+        // 验证状态
+        private bool _hasValidationError;
+        private string _validationMessage;
         
         private void OnEnable()
         {
@@ -50,30 +54,119 @@ namespace BuffSystem.Editor
             _removeStackCount = serializedObject.FindProperty("removeStackCount");
             _removeInterval = serializedObject.FindProperty("removeInterval");
             _buffLogicInstance = serializedObject.FindProperty("buffLogicInstance");
+
+            ValidateBuffData();
+        }
+
+        /// <summary>
+        /// 验证Buff数据配置
+        /// </summary>
+        private void ValidateBuffData()
+        {
+            var currentData = (BuffDataSO)target;
+            if (currentData == null) return;
+
+            // 重置验证状态
+            _hasValidationError = false;
+            _validationMessage = "";
+
+            // 获取所有Buff数据
+            var allBuffs = BuffDatabase.Instance.GetAllBuffData();
+
+            bool hasIdConflict = false;
+            bool hasNameConflict = false;
+            string conflictMessage = "";
+
+            foreach (var buff in allBuffs)
+            {
+                if (buff == null) continue;
+
+                // 跳过当前正在编辑的Buff（除非是其他同名/同ID的）
+                if (buff == currentData) continue;
+
+                // 检查ID冲突
+                if (buff.Id == currentData.Id)
+                {
+                    hasIdConflict = true;
+                    conflictMessage += $"• ID冲突: {buff.Id} 已被 '{buff.Name}' 使用\n";
+                }
+
+                // 检查Name冲突
+                if (!string.IsNullOrEmpty(buff.Name) &&
+                    !string.IsNullOrEmpty(currentData.Name) &&
+                    buff.Name == currentData.Name)
+                {
+                    hasNameConflict = true;
+                    conflictMessage += $"• 名称冲突: '{buff.Name}' 已被 ID:{buff.Id} 使用\n";
+                }
+            }
+
+            // 保存验证状态
+            if (hasIdConflict || hasNameConflict)
+            {
+                _hasValidationError = true;
+                _validationMessage = conflictMessage;
+                Debug.LogError($"[BuffDataSOEditor] {currentData.Name} (ID:{currentData.Id}) 配置验证失败:\n{conflictMessage}", currentData);
+            }
         }
         
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            
+
             EditorGUILayout.Space(10);
-            
+
             // 标题
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             EditorGUILayout.LabelField("BUFF配置", EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
-            
+
             EditorGUILayout.Space(10);
+
+            // 显示验证错误
+            if (_hasValidationError)
+            {
+                EditorGUILayout.HelpBox(
+                    $"配置验证失败:\n{_validationMessage}",
+                    MessageType.Error);
+                EditorGUILayout.Space(5);
+            }
             
             // 基础信息
             _showBasicInfo = EditorGUILayout.Foldout(_showBasicInfo, "基础信息", true, EditorStyles.foldoutHeader);
             if (_showBasicInfo)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(_id, new GUIContent("ID", "Buff唯一标识符"));
-                EditorGUILayout.PropertyField(_buffName, new GUIContent("名称", "Buff显示名称"));
+
+                // ID字段 - 如果有冲突显示错误样式
+                var idContent = new GUIContent("ID", "Buff唯一标识符");
+                if (_hasValidationError && _validationMessage.Contains($"ID冲突: {_id.intValue}"))
+                {
+                    GUI.color = Color.red;
+                    EditorGUILayout.PropertyField(_id, idContent);
+                    GUI.color = Color.white;
+                }
+                else
+                {
+                    EditorGUILayout.PropertyField(_id, idContent);
+                }
+
+                // Name字段 - 如果有冲突显示错误样式
+                var nameContent = new GUIContent("名称", "Buff显示名称");
+                var currentName = _buffName.stringValue;
+                if (_hasValidationError && _validationMessage.Contains($"名称冲突: '{currentName}'"))
+                {
+                    GUI.color = Color.red;
+                    EditorGUILayout.PropertyField(_buffName, nameContent);
+                    GUI.color = Color.white;
+                }
+                else
+                {
+                    EditorGUILayout.PropertyField(_buffName, nameContent);
+                }
+
                 EditorGUILayout.PropertyField(_description, new GUIContent("描述", "Buff详细描述"));
                 EditorGUILayout.PropertyField(_effectType, new GUIContent("效果类型", "Buff的效果分类"));
                 EditorGUI.indentLevel--;
