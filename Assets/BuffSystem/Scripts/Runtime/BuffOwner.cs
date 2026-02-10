@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Core;
+using BuffSystem.Data;
 using BuffSystem.Events;
 
 namespace BuffSystem.Runtime
@@ -16,7 +18,10 @@ namespace BuffSystem.Runtime
         [SerializeField] private bool autoInitialize = true;
         [SerializeField] private bool updateInFixedUpdate = false;
         [SerializeField] private bool showDebugInfo = false;
-        
+
+        // 静态列表 - 管理所有BuffOwner实例
+        private static readonly List<BuffOwner> allOwners = new();
+
         // 内部组件
         private BuffContainer buffContainer;
         private BuffLocalEventSystem localEvents;
@@ -80,7 +85,7 @@ namespace BuffSystem.Runtime
         #endregion
         
         #region Unity Lifecycle
-        
+
         private void Awake()
         {
             if (autoInitialize)
@@ -88,23 +93,42 @@ namespace BuffSystem.Runtime
                 Initialize();
             }
         }
-        
+
+        private void OnEnable()
+        {
+            if (!allOwners.Contains(this))
+            {
+                allOwners.Add(this);
+            }
+        }
+
+        private void OnDisable()
+        {
+            allOwners.Remove(this);
+        }
+
         private void Update()
         {
+            // 回合制模式下不自动更新
+            if (BuffSystemUpdater.CurrentUpdateMode == UpdateMode.TurnBased) return;
+
             if (!updateInFixedUpdate && buffContainer != null)
             {
                 buffContainer.Update(Time.deltaTime);
             }
         }
-        
+
         private void FixedUpdate()
         {
+            // 回合制模式下不自动更新
+            if (BuffSystemUpdater.CurrentUpdateMode == UpdateMode.TurnBased) return;
+
             if (updateInFixedUpdate && buffContainer != null)
             {
                 buffContainer.Update(Time.fixedDeltaTime);
             }
         }
-        
+
         private void OnDestroy()
         {
             // 清理所有Buff
@@ -112,7 +136,32 @@ namespace BuffSystem.Runtime
             buffContainer = null;
             localEvents = null;
         }
-        
+
+        #endregion
+
+        #region Static Update Methods
+
+        /// <summary>
+        /// 批量更新所有激活的BuffOwner
+        /// </summary>
+        internal static void UpdateAll(float deltaTime)
+        {
+            for (int i = allOwners.Count - 1; i >= 0; i--)
+            {
+                var owner = allOwners[i];
+                if (owner == null)
+                {
+                    allOwners.RemoveAt(i);
+                    continue;
+                }
+
+                if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
+                {
+                    owner.buffContainer.Update(deltaTime);
+                }
+            }
+        }
+
         #endregion
         
         #region Initialization
