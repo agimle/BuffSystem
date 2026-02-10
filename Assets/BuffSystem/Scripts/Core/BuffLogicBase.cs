@@ -8,7 +8,7 @@ namespace BuffSystem.Core
     /// 支持序列化，可在Inspector中配置
     /// </summary>
     [Serializable]
-    public abstract class BuffLogicBase : IBuffLogic, ICloneable
+    public abstract class BuffLogicBase : IBuffLogic, ICloneable, IBuffSerializable
     {
         [NonSerialized] private IBuff buff;
 
@@ -124,6 +124,26 @@ namespace BuffSystem.Core
                 receiver.OnBuffEvent(Buff, eventName, data);
             }
         }
+
+        #region IBuffSerializable Implementation
+
+        /// <summary>
+        /// 序列化为存档数据（子类可重写以保存自定义状态）
+        /// </summary>
+        public virtual void Serialize(BuffSaveData saveData)
+        {
+            // 基类不保存任何数据，子类可重写
+        }
+
+        /// <summary>
+        /// 从存档数据反序列化（子类可重写以恢复自定义状态）
+        /// </summary>
+        public virtual void Deserialize(BuffSaveData saveData)
+        {
+            // 基类不恢复任何数据，子类可重写
+        }
+
+        #endregion
     }
     
     /// <summary>

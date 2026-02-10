@@ -194,6 +194,11 @@ namespace BuffSystem.Runtime
         /// </summary>
         internal static int ActiveOwnerCount => allOwners.Count;
 
+        /// <summary>
+        /// 获取所有Buff持有者（只读）
+        /// </summary>
+        public static IReadOnlyList<BuffOwner> AllOwners => allOwners;
+
         #endregion
         
         #region Initialization

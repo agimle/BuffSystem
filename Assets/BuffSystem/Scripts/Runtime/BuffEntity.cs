@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using BuffSystem.Core;
+using BuffSystem.Data;
 using BuffSystem.Events;
 
 namespace BuffSystem.Runtime
@@ -282,6 +283,32 @@ namespace BuffSystem.Runtime
         private bool CanRefresh => data?.CanRefresh ?? false;
 
         public int SourceId => sourceId;
+
+        /// <summary>
+        /// 从存档数据恢复Buff状态
+        /// </summary>
+        internal void RestoreState(BuffSaveData saveData)
+        {
+            if (saveData == null) return;
+
+            // 恢复层数
+            int targetStack = saveData.CurrentStack;
+            if (targetStack > 0)
+            {
+                // 先重置层数
+                currentStack = 0;
+                // 再添加层数（触发事件）
+                AddStack(targetStack);
+            }
+
+            // 恢复持续时间（已持续时间）
+            duration = saveData.ElapsedDuration;
+
+            if (BuffSystemConfig.Instance.EnableDebugLog)
+            {
+                Debug.Log($"[BuffEntity] 恢复状态: {Name}, 层数: {CurrentStack}, 持续时间: {duration:F1}s");
+            }
+        }
 
         public override string ToString()
         {
