@@ -10,12 +10,12 @@ namespace BuffSystem.Core
         /// 所属的Buff实例
         /// </summary>
         IBuff Buff { get; set; }
-        
+
         /// <summary>
         /// 初始化时调用
         /// </summary>
         void Initialize(IBuff buff);
-        
+
         /// <summary>
         /// 销毁时调用
         /// </summary>
@@ -65,7 +65,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnVisualUpdate(float deltaTime);
     }
-    
+
     /// <summary>
     /// Buff生命周期接口 - 刷新
     /// </summary>
@@ -76,7 +76,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnRefresh();
     }
-    
+
     /// <summary>
     /// Buff生命周期接口 - 层数变化
     /// </summary>
@@ -87,7 +87,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnStackChanged(int oldStack, int newStack);
     }
-    
+
     /// <summary>
     /// Buff生命周期接口 - 消层
     /// </summary>
@@ -109,7 +109,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnRemove();
     }
-    
+
     /// <summary>
     /// Buff生命周期接口 - 结束
     /// </summary>
@@ -120,7 +120,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnEnd();
     }
-    
+
     /// <summary>
     /// Buff生命周期接口 - 持续时间变化
     /// </summary>

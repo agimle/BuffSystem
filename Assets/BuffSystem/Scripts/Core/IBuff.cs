@@ -9,22 +9,22 @@ namespace BuffSystem.Core
         /// Buff唯一标识符（实例ID）
         /// </summary>
         int InstanceId { get; }
-        
+
         /// <summary>
         /// Buff数据ID（配置ID）
         /// </summary>
         int DataId { get; }
-        
+
         /// <summary>
         /// Buff名称
         /// </summary>
         string Name { get; }
-        
+
         /// <summary>
         /// 当前层数
         /// </summary>
         int CurrentStack { get; }
-        
+
         /// <summary>
         /// 最大层数
         /// </summary>
@@ -34,12 +34,12 @@ namespace BuffSystem.Core
         /// 当前持续时间
         /// </summary>
         float Duration { get; }
-        
+
         /// <summary>
         /// 总持续时间
         /// </summary>
         float TotalDuration { get; }
-        
+
         /// <summary>
         /// 剩余时间
         /// </summary>
@@ -59,17 +59,17 @@ namespace BuffSystem.Core
         /// Buff来源（可以是技能、道具、角色、环境等）
         /// </summary>
         object Source { get; }
-        
+
         /// <summary>
         /// 来源ID（用于快速比较，避免装箱）
         /// </summary>
         int SourceId { get; }
-        
+
         /// <summary>
         /// 所属持有者
         /// </summary>
         IBuffOwner Owner { get; }
-        
+
         /// <summary>
         /// Buff数据引用
         /// </summary>

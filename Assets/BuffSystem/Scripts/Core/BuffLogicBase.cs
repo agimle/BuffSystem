@@ -11,7 +11,7 @@ namespace BuffSystem.Core
     public abstract class BuffLogicBase : IBuffLogic
     {
         [NonSerialized] private IBuff buff;
-        
+
         /// <summary>
         /// 所属的Buff实例
         /// </summary>
@@ -21,7 +21,7 @@ namespace BuffSystem.Core
         /// 所属Buff的持有者
         /// </summary>
         protected IBuffOwner Owner => buff?.Owner;
-        
+
         /// <summary>
         /// Buff来源
         /// </summary>
@@ -61,7 +61,7 @@ namespace BuffSystem.Core
         /// 销毁时调用（子类可重写）
         /// </summary>
         protected virtual void OnDisposed() { }
-        
+
         /// <summary>
         /// 获取来源并转换为指定类型
         /// </summary>
@@ -78,7 +78,7 @@ namespace BuffSystem.Core
             source = Source as T;
             return source != null;
         }
-        
+
         /// <summary>
         /// 尝试获取持有者身上的组件（如果是MonoBehaviour）
         /// </summary>
@@ -119,7 +119,7 @@ namespace BuffSystem.Core
         /// </summary>
         void OnBuffEvent(IBuff buff, string eventName, object data);
     }
-    
+
     /// <summary>
     /// 空Buff逻辑 - 默认实现
     /// </summary>

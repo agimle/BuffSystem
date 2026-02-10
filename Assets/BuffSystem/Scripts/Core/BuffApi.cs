@@ -13,7 +13,7 @@ namespace BuffSystem.Core
         #region Initialization
         
         private static bool isInitialized;
-        
+
         /// <summary>
         /// 初始化Buff系统
         /// </summary>
@@ -35,11 +35,11 @@ namespace BuffSystem.Core
             BuffDatabase.Instance.Reload();
             Debug.Log("[BuffApi] Buff数据重新加载完成");
         }
-        
+
         #endregion
-        
+
         #region Add Buff
-        
+
         /// <summary>
         /// 添加Buff（通过ID）
         /// </summary>
@@ -50,23 +50,23 @@ namespace BuffSystem.Core
         public static IBuff AddBuff(int buffId, IBuffOwner target, object source = null)
         {
             EnsureInitialized();
-            
+
             if (target == null)
             {
                 Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
                 return null;
             }
-            
+
             var data = BuffDatabase.Instance.GetBuffData(buffId);
             if (data == null)
             {
                 Debug.LogError($"[BuffApi] 添加Buff失败：未找到ID为 {buffId} 的Buff配置");
                 return null;
             }
-            
+
             return target.BuffContainer.AddBuff(data, source);
         }
-        
+
         /// <summary>
         /// 添加Buff（通过名称）
         /// </summary>
@@ -77,23 +77,23 @@ namespace BuffSystem.Core
         public static IBuff AddBuff(string buffName, IBuffOwner target, object source = null)
         {
             EnsureInitialized();
-            
+
             if (target == null)
             {
                 Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
                 return null;
             }
-            
+
             var data = BuffDatabase.Instance.GetBuffData(buffName);
             if (data == null)
             {
                 Debug.LogError($"[BuffApi] 添加Buff失败：未找到名称为 '{buffName}' 的Buff配置");
                 return null;
             }
-            
+
             return target.BuffContainer.AddBuff(data, source);
         }
-        
+
         /// <summary>
         /// 添加Buff（通过数据）
         /// </summary>
@@ -104,22 +104,22 @@ namespace BuffSystem.Core
         public static IBuff AddBuff(IBuffData data, IBuffOwner target, object source = null)
         {
             EnsureInitialized();
-            
+
             if (data == null)
             {
                 Debug.LogError("[BuffApi] 添加Buff失败：数据为空");
                 return null;
             }
-            
+
             if (target == null)
             {
                 Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
                 return null;
             }
-            
+
             return target.BuffContainer.AddBuff(data, source);
         }
-        
+
         /// <summary>
         /// 尝试添加Buff（通过ID）
         /// </summary>
@@ -129,7 +129,7 @@ namespace BuffSystem.Core
             buff = AddBuff(buffId, target, source);
             return buff != null;
         }
-        
+
         /// <summary>
         /// 尝试添加Buff（通过名称）
         /// </summary>
@@ -139,11 +139,11 @@ namespace BuffSystem.Core
             buff = AddBuff(buffName, target, source);
             return buff != null;
         }
-        
+
         #endregion
-        
+
         #region Remove Buff
-        
+
         /// <summary>
         /// 移除Buff实例
         /// </summary>
@@ -151,7 +151,7 @@ namespace BuffSystem.Core
         {
             buff?.Owner?.BuffContainer?.RemoveBuff(buff);
         }
-        
+
         /// <summary>
         /// 移除指定ID的所有Buff
         /// </summary>
@@ -159,21 +159,21 @@ namespace BuffSystem.Core
         {
             target?.BuffContainer?.RemoveBuff(buffId);
         }
-        
+
         /// <summary>
         /// 移除指定名称的所有Buff
         /// </summary>
         public static void RemoveBuff(string buffName, IBuffOwner target)
         {
             if (target?.BuffContainer == null) return;
-            
+
             int buffId = BuffDatabase.Instance.GetBuffId(buffName);
             if (buffId >= 0)
             {
                 target.BuffContainer.RemoveBuff(buffId);
             }
         }
-        
+
         /// <summary>
         /// 移除指定来源的所有Buff
         /// </summary>
@@ -181,7 +181,7 @@ namespace BuffSystem.Core
         {
             target?.BuffContainer?.RemoveBuffBySource(source);
         }
-        
+
         /// <summary>
         /// 清空所有Buff
         /// </summary>
@@ -189,11 +189,11 @@ namespace BuffSystem.Core
         {
             target?.BuffContainer?.ClearAllBuffs();
         }
-        
+
         #endregion
-        
+
         #region Query
-        
+
         /// <summary>
         /// 是否拥有指定ID的Buff
         /// </summary>
@@ -201,18 +201,18 @@ namespace BuffSystem.Core
         {
             return target?.BuffContainer != null && target.BuffContainer.HasBuff(buffId);
         }
-        
+
         /// <summary>
         /// 是否拥有指定名称的Buff
         /// </summary>
         public static bool HasBuff(string buffName, IBuffOwner target)
         {
             if (target?.BuffContainer == null) return false;
-            
+
             int buffId = BuffDatabase.Instance.GetBuffId(buffName);
             return buffId >= 0 && target.BuffContainer.HasBuff(buffId);
         }
-        
+
         /// <summary>
         /// 是否拥有指定来源的Buff
         /// </summary>
@@ -278,9 +278,9 @@ namespace BuffSystem.Core
         {
             return target?.BuffContainer?.AllBuffs.Count ?? 0;
         }
-        
+
         #endregion
-        
+
         #region Data Query
         
         /// <summary>
@@ -300,7 +300,7 @@ namespace BuffSystem.Core
             EnsureInitialized();
             return BuffDatabase.Instance.GetBuffData(buffName);
         }
-        
+
         /// <summary>
         /// 是否存在Buff数据
         /// </summary>
@@ -355,9 +355,9 @@ namespace BuffSystem.Core
         {
             buff?.RemoveStack(amount);
         }
-        
+
         #endregion
-        
+
         #region Private Methods
         
         private static void EnsureInitialized()

@@ -12,12 +12,12 @@ namespace BuffSystem.Core
         /// 持有者唯一标识
         /// </summary>
         int OwnerId { get; }
-        
+
         /// <summary>
         /// 持有者名称（用于调试）
         /// </summary>
         string OwnerName { get; }
-        
+
         /// <summary>
         /// 获取Buff容器
         /// </summary>
@@ -63,12 +63,12 @@ namespace BuffSystem.Core
         /// 根据来源移除Buff
         /// </summary>
         void RemoveBuffBySource(object source);
-        
+
         /// <summary>
         /// 清空所有Buff
         /// </summary>
         void ClearAllBuffs();
-        
+
         /// <summary>
         /// 获取Buff
         /// </summary>
@@ -78,7 +78,7 @@ namespace BuffSystem.Core
         /// 获取所有指定ID的Buff
         /// </summary>
         IEnumerable<IBuff> GetBuffs(int dataId);
-        
+
         /// <summary>
         /// 获取所有指定来源的Buff
         /// </summary>
@@ -88,12 +88,12 @@ namespace BuffSystem.Core
         /// 是否拥有指定Buff
         /// </summary>
         bool HasBuff(int dataId);
-        
+
         /// <summary>
         /// 是否拥有指定来源的Buff
         /// </summary>
         bool HasBuff(int dataId, object source);
-        
+
         /// <summary>
         /// 每帧更新
         /// </summary>
