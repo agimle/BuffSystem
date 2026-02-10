@@ -11,6 +11,7 @@
 - **生命周期** - 完整的Buff生命周期回调
 - **事件系统** - 全局和本地事件支持
 - **类型安全** - 泛型接口支持
+- **效果系统** - 基于效果的Buff逻辑配置
 
 ## 快速开始
 
@@ -22,7 +23,7 @@
 
 1. 在Project窗口右键 -> Create -> BuffSystem -> Buff Data
 2. 配置Buff的各项参数
-3. （可选）创建Buff逻辑脚本
+3. （可选）创建Buff逻辑脚本或使用EffectBasedBuffLogic配置效果
 
 ### 3. 挂载BuffOwner
 
@@ -101,6 +102,8 @@ public interface IBuffContainer
 {
     IBuffOwner Owner { get; }
     IReadOnlyCollection<IBuff> AllBuffs { get; }
+    int Count { get; }
+    
     IBuff AddBuff(IBuffData data, object source = null);
     void RemoveBuff(IBuff buff);
     void RemoveBuff(int dataId);
@@ -136,6 +139,7 @@ public interface IBuff
     int SourceId { get; }
     IBuffOwner Owner { get; }
     IBuffData Data { get; }
+    
     T GetSource<T>() where T : class;
     bool TryGetSource<T>(out T source) where T : class;
     void AddStack(int amount);
@@ -191,6 +195,18 @@ public class MyBuffLogic : BuffLogicBase, IBuffAcquire, IBuffRemove
 }
 ```
 
+### IEffect - 效果接口
+
+用于EffectBasedBuffLogic的效果配置：
+
+```csharp
+public interface IEffect
+{
+    void Execute(IBuff buff);
+    void Cancel(IBuff buff);
+}
+```
+
 ## 生命周期接口
 
 | 接口 | 触发时机 |
@@ -204,6 +220,7 @@ public class MyBuffLogic : BuffLogicBase, IBuffAcquire, IBuffRemove
 | `IBuffReduce` | Buff层数减少 |
 | `IBuffRemove` | Buff被标记移除 |
 | `IBuffEnd` | Buff完全销毁 |
+| `IBuffDurationChange` | Buff持续时间变化 |
 
 ## 事件系统
 
@@ -221,6 +238,18 @@ BuffEventSystem.OnBuffRemoved += (sender, e) => {
 BuffEventSystem.OnStackChanged += (sender, e) => {
     Debug.Log($"层数变化: {e.Buff.Name} {e.OldStack} -> {e.NewStack}");
 };
+
+BuffEventSystem.OnBuffRefreshed += (sender, e) => {
+    Debug.Log($"Buff刷新: {e.Buff.Name}");
+};
+
+BuffEventSystem.OnBuffExpired += (sender, e) => {
+    Debug.Log($"Buff过期: {e.Buff.Name}");
+};
+
+BuffEventSystem.OnBuffCleared += (sender, e) => {
+    Debug.Log($"Buff清空: {e.Owner.OwnerName}");
+};
 ```
 
 ### 本地事件
@@ -229,6 +258,12 @@ BuffEventSystem.OnStackChanged += (sender, e) => {
 buffOwner.LocalEvents.OnBuffAdded += (sender, e) => {
     // 只有这个持有者的Buff添加时触发
 };
+
+buffOwner.LocalEvents.OnBuffRemoved += (sender, e) => { };
+buffOwner.LocalEvents.OnStackChanged += (sender, e) => { };
+buffOwner.LocalEvents.OnBuffRefreshed += (sender, e) => { };
+buffOwner.LocalEvents.OnBuffExpired += (sender, e) => { };
+buffOwner.LocalEvents.OnBuffCleared += (sender, e) => { };
 ```
 
 ### Buff事件接收
@@ -292,7 +327,7 @@ BuffApi.AddBuff(1001, character);
 ### BuffDataSO 配置项
 
 | 配置项 | 说明 |
-| ------ | ------ |
+| ------ | ---------- |
 | ID | Buff唯一标识符 |
 | 名称 | Buff显示名称 |
 | 描述 | Buff详细描述 |
@@ -312,11 +347,24 @@ BuffApi.AddBuff(1001, character);
 ### BuffSystemConfig 全局配置
 
 | 配置项 | 说明 |
-| ------ | ------ |
+| ------ | ---------- |
 | DefaultPoolCapacity | 默认对象池容量 |
 | MaxPoolSize | 对象池最大容量 |
 | UpdateMode | 更新模式（EveryFrame/Interval/Manual） |
+| BatchCount | 批处理数量 |
+| UpdateInterval | 更新间隔（用于Interval模式） |
 | EnableDebugLog | 是否启用调试日志 |
+| EnableGizmos | 是否启用Gizmos |
+
+### BuffDataCenter 数据中心
+
+用于集中管理Buff数据资源：
+
+```csharp
+// 创建BuffDataCenter
+// Project窗口右键 -> Create -> BuffSystem -> Data Center
+// 将所有BuffDataSO添加到BuffDataList中
+```
 
 ## 扩展开发
 
@@ -356,6 +404,41 @@ public class StunBuffLogic : BuffLogicBase, IBuffAcquire, IBuffRemove
 }
 ```
 
+### 使用EffectBasedBuffLogic
+
+无需编写代码，直接在Inspector中配置效果：
+
+```csharp
+// 在BuffDataSO中选择EffectBasedBuffLogic作为逻辑脚本
+// 然后在Inspector中配置各个生命周期的效果列表
+```
+
+### 创建自定义Effect
+
+```csharp
+[System.Serializable]
+public class DamageEffect : EffectBase
+{
+    [SerializeField] private float damageAmount = 10f;
+    
+    public override void Execute(IBuff buff)
+    {
+        if (TryGetOwnerComponent<HealthComponent>(buff, out var health))
+        {
+            health.TakeDamage(damageAmount);
+        }
+        
+        // 发送事件
+        SendEvent(buff, "Damage", damageAmount);
+    }
+    
+    public override void Cancel(IBuff buff)
+    {
+        // 取消效果（如果需要）
+    }
+}
+```
+
 ### 高级API使用
 
 ```csharp
@@ -379,6 +462,54 @@ BuffApi.RemoveStack(buff, 1);
 
 // 刷新Buff持续时间
 BuffApi.RefreshBuff(buff);
+
+// 尝试添加Buff（带返回值）
+if (BuffApi.TryAddBuff(1001, owner, out var buff))
+{
+    // 添加成功
+}
+
+// 根据来源移除Buff
+BuffApi.RemoveBuffBySource(damageSource, owner);
+
+// 获取指定来源的Buff
+var buffs = BuffApi.GetBuffsBySource(damageSource, owner);
+```
+
+## 更新模式
+
+Buff系统支持三种更新模式：
+
+### EveryFrame（每帧更新）
+
+```csharp
+// 每帧更新所有Buff
+// 适合需要精确计时的Buff
+```
+
+### Interval（间隔更新）
+
+```csharp
+// 按固定间隔批量更新
+// 适合大量Buff的性能优化
+```
+
+### Manual（手动更新）
+
+```csharp
+// 完全手动控制更新时机
+// 适合特殊需求
+BuffContainer.Update(deltaTime);
+```
+
+## 对象池
+
+BuffEntity使用对象池管理，避免频繁创建和销毁：
+
+```csharp
+// 对象池配置在BuffSystemConfig中
+// DefaultPoolCapacity: 默认容量
+// MaxPoolSize: 最大容量
 ```
 
 ## 许可证
