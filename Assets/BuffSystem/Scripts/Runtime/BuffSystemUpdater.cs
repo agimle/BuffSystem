@@ -15,7 +15,13 @@ namespace BuffSystem.Runtime
         [SerializeField] private UpdateMode updateMode = UpdateMode.EveryFrame;
         [SerializeField] private float updateInterval = 0.1f;
 
+        [Header("批处理设置")]
+        [SerializeField] private bool enableBatchUpdate = false;
+        [SerializeField] private int batchCount = 4;
+        [SerializeField] private int batchThreshold = 100;
+
         private float updateTimer;
+        private int currentBatchIndex = 0;
         private static BuffSystemUpdater instance;
 
         // 线程安全锁
@@ -69,6 +75,9 @@ namespace BuffSystem.Runtime
                 var config = BuffSystemConfig.Instance;
                 updateMode = config.UpdateMode;
                 updateInterval = config.UpdateInterval;
+                enableBatchUpdate = config.EnableBatchUpdate;
+                batchCount = config.BatchCount;
+                batchThreshold = config.BatchThreshold;
             }
         }
 
@@ -128,8 +137,20 @@ namespace BuffSystem.Runtime
 
         private void UpdateAllContainers(float deltaTime)
         {
-            // 通过BuffOwner的静态列表批量更新所有Buff容器
-            BuffOwner.UpdateAll(deltaTime);
+            // 检查是否启用批处理更新
+            bool shouldUseBatchUpdate = enableBatchUpdate && BuffOwner.ActiveOwnerCount >= batchThreshold && batchCount > 1;
+
+            if (shouldUseBatchUpdate)
+            {
+                // 分批更新
+                BuffOwner.UpdateBatch(deltaTime, currentBatchIndex, batchCount);
+                currentBatchIndex = (currentBatchIndex + 1) % batchCount;
+            }
+            else
+            {
+                // 不分批，全部更新
+                BuffOwner.UpdateAll(deltaTime);
+            }
         }
     }
 }
