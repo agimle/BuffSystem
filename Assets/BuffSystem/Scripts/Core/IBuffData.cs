@@ -80,7 +80,7 @@ namespace BuffSystem.Core
         /// </summary>
         IBuffLogic CreateLogic();
     }
-
+    
     /// <summary>
     /// Buff效果类型
     /// </summary>
