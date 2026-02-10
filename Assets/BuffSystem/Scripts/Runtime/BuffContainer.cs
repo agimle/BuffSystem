@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Events;
@@ -28,6 +27,10 @@ namespace BuffSystem.Runtime
         private readonly List<IBuff> buffCache = new();
         private IReadOnlyCollection<IBuff> allBuffsReadOnly;
         private bool isAllBuffsCacheValid;
+
+        // 空集合缓存（避免GC）
+        private static readonly List<IBuff> EmptyBuffList = new();
+        private static readonly List<BuffEntity> EmptyBuffEntityList = new();
 
         // 所属持有者
         public IBuffOwner Owner { get; }
@@ -220,9 +223,10 @@ namespace BuffSystem.Runtime
         {
             if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
-                foreach (var buff in buffs.ToList())
+                // 使用倒序遍历避免修改集合时的问题
+                for (int i = buffs.Count - 1; i >= 0; i--)
                 {
-                    RemoveBuff(buff);
+                    RemoveBuff(buffs[i]);
                 }
             }
         }
@@ -233,12 +237,13 @@ namespace BuffSystem.Runtime
         public void RemoveBuffBySource(object source)
         {
             if (source == null) return;
-            
+
             if (buffsBySource.TryGetValue(source, out var buffs))
             {
-                foreach (var buff in buffs.ToList())
+                // 使用倒序遍历避免修改集合时的问题
+                for (int i = buffs.Count - 1; i >= 0; i--)
                 {
-                    RemoveBuff(buff);
+                    RemoveBuff(buffs[i]);
                 }
             }
         }
@@ -248,14 +253,19 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void ClearAllBuffs()
         {
-            foreach (var buff in buffByInstanceId.Values.ToList())
+            // 将Values复制到临时列表避免修改集合时的问题
+            var tempList = EmptyBuffEntityList;
+            tempList.AddRange(buffByInstanceId.Values);
+
+            for (int i = 0; i < tempList.Count; i++)
             {
-                RemoveBuff(buff);
+                RemoveBuff(tempList[i]);
             }
-            
+            tempList.Clear();
+
             // 立即处理移除队列
             ProcessRemovalQueue();
-            
+
             Owner.OnBuffEvent(BuffEventType.Cleared, null);
         }
         
@@ -272,10 +282,18 @@ namespace BuffSystem.Runtime
             {
                 if (source == null)
                 {
-                    return buffs.FirstOrDefault();
+                    // 替代FirstOrDefault()
+                    return buffs.Count > 0 ? buffs[0] : null;
                 }
-                
-                return buffs.FirstOrDefault(b => b.Source == source);
+
+                // 替代FirstOrDefault(predicate)
+                for (int i = 0; i < buffs.Count; i++)
+                {
+                    if (buffs[i].Source == source)
+                    {
+                        return buffs[i];
+                    }
+                }
             }
             return null;
         }
@@ -289,7 +307,7 @@ namespace BuffSystem.Runtime
             {
                 return buffs;
             }
-            return Enumerable.Empty<IBuff>();
+            return EmptyBuffList;
         }
         
         /// <summary>
@@ -301,7 +319,7 @@ namespace BuffSystem.Runtime
             {
                 return buffs;
             }
-            return Enumerable.Empty<IBuff>();
+            return EmptyBuffList;
         }
         
         /// <summary>
@@ -319,7 +337,14 @@ namespace BuffSystem.Runtime
         {
             if (buffsByDataId.TryGetValue(dataId, out var buffs))
             {
-                return buffs.Any(b => b.Source == source);
+                // 替代Any(predicate)
+                for (int i = 0; i < buffs.Count; i++)
+                {
+                    if (buffs[i].Source == source)
+                    {
+                        return true;
+                    }
+                }
             }
             return false;
         }
