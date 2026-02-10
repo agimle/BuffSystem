@@ -281,6 +281,100 @@ namespace BuffSystem.Core
 
         #endregion
 
+        #region Tag Query
+
+        /// <summary>
+        /// 根据标签获取所有Buff
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <param name="target">目标持有者</param>
+        /// <returns>拥有该标签的所有Buff</returns>
+        public static IEnumerable<IBuff> GetBuffsByTag(string tag, IBuffOwner target)
+        {
+            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
+            {
+                return System.Array.Empty<IBuff>();
+            }
+
+            var result = new List<IBuff>();
+            foreach (var buff in target.BuffContainer.AllBuffs)
+            {
+                if (buff.Data.HasTag(tag))
+                {
+                    result.Add(buff);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 根据标签移除Buff
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <param name="target">目标持有者</param>
+        public static void RemoveBuffsByTag(string tag, IBuffOwner target)
+        {
+            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
+            {
+                return;
+            }
+
+            var buffsToRemove = GetBuffsByTag(tag, target);
+            foreach (var buff in buffsToRemove)
+            {
+                RemoveBuff(buff);
+            }
+        }
+
+        /// <summary>
+        /// 是否拥有指定标签的Buff
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <param name="target">目标持有者</param>
+        /// <returns>是否拥有</returns>
+        public static bool HasBuffWithTag(string tag, IBuffOwner target)
+        {
+            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
+            {
+                return false;
+            }
+
+            foreach (var buff in target.BuffContainer.AllBuffs)
+            {
+                if (buff.Data.HasTag(tag))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 获取指定标签的Buff数量
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <param name="target">目标持有者</param>
+        /// <returns>Buff数量</returns>
+        public static int GetBuffCountByTag(string tag, IBuffOwner target)
+        {
+            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
+            {
+                return 0;
+            }
+
+            int count = 0;
+            foreach (var buff in target.BuffContainer.AllBuffs)
+            {
+                if (buff.Data.HasTag(tag))
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        #endregion
+
         #region Data Query
         
         /// <summary>

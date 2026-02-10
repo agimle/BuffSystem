@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace BuffSystem.Core
 {
     /// <summary>
@@ -74,6 +76,16 @@ namespace BuffSystem.Core
         /// 移除间隔
         /// </summary>
         float RemoveInterval { get; }
+        
+        /// <summary>
+        /// 标签列表
+        /// </summary>
+        IReadOnlyList<string> Tags { get; }
+        
+        /// <summary>
+        /// 是否拥有指定标签
+        /// </summary>
+        bool HasTag(string tag);
         
         /// <summary>
         /// 创建Buff逻辑实例

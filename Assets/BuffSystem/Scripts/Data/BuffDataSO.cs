@@ -48,6 +48,9 @@ namespace BuffSystem.Data
         [SerializeField] private List<int> dependBuffIds = new(); // 依赖Buff IDs
         [SerializeField] private MutexPriority mutexPriority = MutexPriority.ReplaceOthers;
         
+        [Header("标签")]
+        [SerializeField] private List<string> tags = new();
+        
         [Header("逻辑脚本")]
         #if UNITY_EDITOR
         [SerializeField] private MonoScript buffLogicScript;
@@ -96,6 +99,16 @@ namespace BuffSystem.Data
         /// 互斥优先级
         /// </summary>
         public MutexPriority MutexPriority => mutexPriority;
+        
+        /// <summary>
+        /// 标签列表
+        /// </summary>
+        public IReadOnlyList<string> Tags => tags;
+        
+        /// <summary>
+        /// 是否拥有指定标签
+        /// </summary>
+        public bool HasTag(string tag) => tags.Contains(tag);
         
         /// <summary>
         /// 创建Buff逻辑实例（深拷贝）
