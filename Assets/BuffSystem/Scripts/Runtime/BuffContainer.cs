@@ -444,5 +444,45 @@ namespace BuffSystem.Runtime
         }
         
         #endregion
+        
+        #region Prewarm
+        
+        /// <summary>
+        /// 预热对象池，预先创建指定数量的对象
+        /// </summary>
+        /// <param name="count">预热数量</param>
+        public void Prewarm(int count)
+        {
+            if (count <= 0) return;
+            
+            var tempList = new List<BuffEntity>(count);
+            
+            // 预先创建对象
+            for (int i = 0; i < count; i++)
+            {
+                tempList.Add(buffPool.Get());
+            }
+            
+            // 立即归还到池中
+            foreach (var buff in tempList)
+            {
+                buffPool.Release(buff);
+            }
+            
+            if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+            {
+                Debug.Log($"[BuffContainer] 对象池预热完成，预分配 {count} 个对象，当前池大小: {buffPool.CountAll}");
+            }
+        }
+        
+        /// <summary>
+        /// 获取对象池状态信息
+        /// </summary>
+        public (int total, int active, int inactive) GetPoolStatus()
+        {
+            return (buffPool.CountAll, buffPool.CountActive, buffPool.CountInactive);
+        }
+        
+        #endregion
     }
 }

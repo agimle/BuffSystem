@@ -18,6 +18,9 @@ namespace BuffSystem.Data
         [Header("批处理设置")] [SerializeField] private bool enableBatchUpdate = false;
         [SerializeField] private int batchThreshold = 100; // 超过此数量启用分批
 
+        [Header("预热设置")] [SerializeField] private bool prewarmOnInitialize = true;
+        [SerializeField] private int prewarmCount = 32;
+
         [Header("调试设置")] [SerializeField] private bool enableDebugLog = false;
         [SerializeField] private bool enableGizmos = false;
 
@@ -67,6 +70,16 @@ namespace BuffSystem.Data
         /// 批处理阈值（超过此数量启用分批）
         /// </summary>
         public int BatchThreshold => batchThreshold;
+
+        /// <summary>
+        /// 初始化时是否预热对象池
+        /// </summary>
+        public bool PrewarmOnInitialize => prewarmOnInitialize;
+
+        /// <summary>
+        /// 预热数量
+        /// </summary>
+        public int PrewarmCount => prewarmCount;
 
         #endregion
 

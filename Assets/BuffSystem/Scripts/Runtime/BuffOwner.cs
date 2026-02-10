@@ -211,6 +211,13 @@ namespace BuffSystem.Runtime
             // 初始化Buff系统
             BuffApi.Initialize();
             
+            // 预热对象池
+            var config = Data.BuffSystemConfig.Instance;
+            if (config.PrewarmOnInitialize && config.PrewarmCount > 0)
+            {
+                buffContainer.Prewarm(config.PrewarmCount);
+            }
+            
             if (showDebugInfo)
             {
                 Debug.Log($"[BuffOwner] {gameObject.name} 初始化完成");
