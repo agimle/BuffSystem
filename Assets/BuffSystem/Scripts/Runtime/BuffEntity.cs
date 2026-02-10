@@ -42,6 +42,7 @@ namespace BuffSystem.Runtime
         public float RemainingTime => IsPermanent ? float.MaxValue : Mathf.Max(0, TotalDuration - duration);
         public bool IsPermanent => data?.IsPermanent ?? false;
         public bool IsMarkedForRemoval => isMarkedForRemoval;
+        public bool IsActive => !isMarkedForRemoval && currentStack > 0;
         public object Source => source;
         public IBuffOwner Owner => owner;
         public IBuffData Data => data;

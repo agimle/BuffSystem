@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Core;
 
@@ -35,6 +36,13 @@ namespace BuffSystem.Data
         [SerializeField] private int removeStackCount = 1;
         [SerializeField] private float removeInterval = 0f;
         
+        [Header("条件设置")]
+        [SerializeReference, SubclassSelector]
+        private List<IBuffCondition> addConditions = new();
+        
+        [SerializeReference, SubclassSelector]
+        private List<IBuffCondition> maintainConditions = new();
+        
         [Header("逻辑脚本")]
         #if UNITY_EDITOR
         [SerializeField] private MonoScript buffLogicScript;
@@ -58,6 +66,16 @@ namespace BuffSystem.Data
         public BuffRemoveMode RemoveMode => removeMode;
         public int RemoveStackCount => removeStackCount;
         public float RemoveInterval => removeInterval;
+        
+        /// <summary>
+        /// 添加条件列表
+        /// </summary>
+        public IReadOnlyList<IBuffCondition> AddConditions => addConditions;
+        
+        /// <summary>
+        /// 维持条件列表
+        /// </summary>
+        public IReadOnlyList<IBuffCondition> MaintainConditions => maintainConditions;
         
         /// <summary>
         /// 创建Buff逻辑实例（深拷贝）

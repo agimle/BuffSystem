@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Core;
+using BuffSystem.Data;
 using BuffSystem.Events;
 using BuffSystem.Utils;
 
@@ -97,6 +98,22 @@ namespace BuffSystem.Runtime
             {
                 Debug.LogError("[BuffContainer] 尝试添加空的Buff数据");
                 return null;
+            }
+            
+            // 检查添加条件
+            if (data is BuffDataSO buffDataSO)
+            {
+                foreach (var condition in buffDataSO.AddConditions)
+                {
+                    if (condition != null && !condition.Check(Owner, data))
+                    {
+                        if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                        {
+                            Debug.Log($"[BuffContainer] 添加Buff失败，条件不满足: {condition.Description}");
+                        }
+                        return null;
+                    }
+                }
             }
             
             // 处理唯一性
@@ -361,6 +378,30 @@ namespace BuffSystem.Runtime
             // 更新所有Buff
             foreach (var buff in buffByInstanceId.Values)
             {
+                // 检查维持条件
+                if (buff.Data is BuffDataSO buffDataSO && buffDataSO.MaintainConditions.Count > 0)
+                {
+                    bool conditionsMet = true;
+                    foreach (var condition in buffDataSO.MaintainConditions)
+                    {
+                        if (condition != null && !condition.Check(Owner, buff.Data))
+                        {
+                            conditionsMet = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!conditionsMet)
+                    {
+                        buff.MarkForRemoval();
+                        if (!removalQueue.Contains(buff.InstanceId))
+                        {
+                            removalQueue.Enqueue(buff.InstanceId);
+                        }
+                        continue;
+                    }
+                }
+                
                 buff.Update(deltaTime);
                 
                 if (buff.IsMarkedForRemoval && !removalQueue.Contains(buff.InstanceId))
