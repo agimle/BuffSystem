@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
@@ -116,6 +117,25 @@ namespace BuffSystem.Runtime
                 }
             }
             
+            // 处理依赖关系
+            if (data is BuffDataSO dataSO && dataSO.DependBuffIds.Count > 0)
+            {
+                if (!HandleDependency(dataSO, source))
+                {
+                    return null;
+                }
+            }
+            
+            // 处理互斥关系
+            if (data is BuffDataSO dataSO2 && dataSO2.MutexBuffIds.Count > 0)
+            {
+                var mutexResult = HandleMutex(dataSO2, source);
+                if (mutexResult == null)
+                {
+                    return null;
+                }
+            }
+            
             // 处理唯一性
             if (data.IsUnique)
             {
@@ -169,6 +189,104 @@ namespace BuffSystem.Runtime
             }
             
             return existingBuff;
+        }
+        
+        /// <summary>
+        /// 处理依赖关系
+        /// </summary>
+        private bool HandleDependency(BuffDataSO data, object source)
+        {
+            foreach (var dependId in data.DependBuffIds)
+            {
+                if (!HasBuff(dependId))
+                {
+                    // 依赖的Buff不存在，尝试自动添加
+                    var dependData = BuffDatabase.Instance.GetBuffData(dependId);
+                    if (dependData != null)
+                    {
+                        var addedBuff = AddBuff(dependData, source);
+                        if (addedBuff == null)
+                        {
+                            if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                            {
+                                Debug.Log($"[BuffContainer] 添加Buff失败，依赖Buff {dependId} 无法添加");
+                            }
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                        {
+                            Debug.Log($"[BuffContainer] 添加Buff失败，依赖Buff {dependId} 数据不存在");
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        /// <summary>
+        /// 处理互斥关系
+        /// </summary>
+        private IBuff HandleMutex(BuffDataSO data, object source)
+        {
+            foreach (var mutexId in data.MutexBuffIds)
+            {
+                if (buffsByDataId.TryGetValue(mutexId, out var mutexBuffs) && mutexBuffs.Count > 0)
+                {
+                    switch (data.MutexPriority)
+                    {
+                        case MutexPriority.BlockNew:
+                            if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                            {
+                                Debug.Log($"[BuffContainer] 添加Buff {data.Id} 被阻止，与Buff {mutexId} 互斥");
+                            }
+                            return null;
+                            
+                        case MutexPriority.ReplaceOthers:
+                            // 移除互斥Buff
+                            for (int i = mutexBuffs.Count - 1; i >= 0; i--)
+                            {
+                                RemoveBuff(mutexBuffs[i]);
+                            }
+                            break;
+                            
+                        case MutexPriority.Coexist:
+                            // 仅标记，不做处理
+                            break;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// 处理依赖移除 - 当Buff被移除时，移除依赖它的Buff
+        /// </summary>
+        private void HandleDependencyRemoval(int removedBuffId)
+        {
+            // 收集需要移除的Buff
+            var buffsToRemove = new List<BuffEntity>();
+            
+            foreach (var buff in buffByInstanceId.Values)
+            {
+                if (buff.Data is BuffDataSO buffDataSO && buffDataSO.DependBuffIds.Contains(removedBuffId))
+                {
+                    buffsToRemove.Add(buff);
+                }
+            }
+            
+            // 移除依赖的Buff
+            foreach (var buff in buffsToRemove)
+            {
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                {
+                    Debug.Log($"[BuffContainer] Buff {buff.Name} 因依赖的Buff {removedBuffId} 被移除而自动移除");
+                }
+                RemoveBuff(buff);
+            }
         }
         
         /// <summary>
@@ -456,6 +574,9 @@ namespace BuffSystem.Runtime
                 // 清理并归还对象池
                 buff.Cleanup();
                 buffPool.Release(buff);
+                
+                // 检查依赖关系，移除依赖于此Buff的其他Buff
+                HandleDependencyRemoval(buff.DataId);
 
                 if (Data.BuffSystemConfig.Instance.EnableDebugLog)
                 {

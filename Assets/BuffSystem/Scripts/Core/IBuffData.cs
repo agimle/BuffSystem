@@ -128,4 +128,25 @@ namespace BuffSystem.Core
         /// </summary>
         Reduce = 1
     }
+    
+    /// <summary>
+    /// 互斥优先级
+    /// </summary>
+    public enum MutexPriority
+    {
+        /// <summary>
+        /// 阻止新Buff添加
+        /// </summary>
+        BlockNew = 0,
+        
+        /// <summary>
+        /// 替换已有Buff
+        /// </summary>
+        ReplaceOthers = 1,
+        
+        /// <summary>
+        /// 允许共存（仅标记关系）
+        /// </summary>
+        Coexist = 2
+    }
 }

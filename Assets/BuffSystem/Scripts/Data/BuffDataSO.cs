@@ -43,6 +43,11 @@ namespace BuffSystem.Data
         [SerializeReference, SubclassSelector]
         private List<IBuffCondition> maintainConditions = new();
         
+        [Header("关系设置")]
+        [SerializeField] private List<int> mutexBuffIds = new(); // 互斥Buff IDs
+        [SerializeField] private List<int> dependBuffIds = new(); // 依赖Buff IDs
+        [SerializeField] private MutexPriority mutexPriority = MutexPriority.ReplaceOthers;
+        
         [Header("逻辑脚本")]
         #if UNITY_EDITOR
         [SerializeField] private MonoScript buffLogicScript;
@@ -76,6 +81,21 @@ namespace BuffSystem.Data
         /// 维持条件列表
         /// </summary>
         public IReadOnlyList<IBuffCondition> MaintainConditions => maintainConditions;
+        
+        /// <summary>
+        /// 互斥Buff ID列表
+        /// </summary>
+        public IReadOnlyList<int> MutexBuffIds => mutexBuffIds;
+        
+        /// <summary>
+        /// 依赖Buff ID列表
+        /// </summary>
+        public IReadOnlyList<int> DependBuffIds => dependBuffIds;
+        
+        /// <summary>
+        /// 互斥优先级
+        /// </summary>
+        public MutexPriority MutexPriority => mutexPriority;
         
         /// <summary>
         /// 创建Buff逻辑实例（深拷贝）
