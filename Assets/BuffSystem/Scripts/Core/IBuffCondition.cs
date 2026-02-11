@@ -1,5 +1,6 @@
 using System;
 using BuffSystem.Data;
+using BuffSystem.Utils;
 
 namespace BuffSystem.Core
 {
@@ -46,6 +47,7 @@ namespace BuffSystem.Core
                     return !requireActive || buff.IsActive;
                 }
             }
+
             return false;
         }
 
@@ -72,6 +74,7 @@ namespace BuffSystem.Core
                     return false;
                 }
             }
+
             return true;
         }
 
@@ -88,14 +91,7 @@ namespace BuffSystem.Core
 
         public bool Check(IBuffOwner owner, IBuffData data)
         {
-            foreach (var condition in conditions)
-            {
-                if (condition != null && !condition.Check(owner, data))
-                {
-                    return false;
-                }
-            }
-            return true;
+            return conditions.CheckAllConditions(owner, data);
         }
 
         public string Description
@@ -123,16 +119,7 @@ namespace BuffSystem.Core
 
         public bool Check(IBuffOwner owner, IBuffData data)
         {
-            if (conditions.Count == 0) return true;
-
-            foreach (var condition in conditions)
-            {
-                if (condition != null && condition.Check(owner, data))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return conditions.CheckAnyCondition(owner, data);
         }
 
         public string Description

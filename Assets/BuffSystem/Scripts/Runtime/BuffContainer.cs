@@ -114,19 +114,13 @@ namespace BuffSystem.Runtime
             }
             
             // 检查添加条件
-            if (data is BuffDataSO buffDataSO)
+            if (data is BuffDataSO buffDataSO && !buffDataSO.AddConditions.CheckAllConditions(Owner, data))
             {
-                foreach (var condition in buffDataSO.AddConditions)
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
                 {
-                    if (condition != null && !condition.Check(Owner, data))
-                    {
-                        if (Data.BuffSystemConfig.Instance.EnableDebugLog)
-                        {
-                            Debug.Log($"[BuffContainer] 添加Buff失败，条件不满足: {condition.Description}");
-                        }
-                        return null;
-                    }
+                    Debug.Log("[BuffContainer] 添加Buff失败，条件不满足");
                 }
+                return null;
             }
             
             // 处理依赖关系
@@ -506,27 +500,14 @@ namespace BuffSystem.Runtime
             foreach (var buff in buffByInstanceId.Values)
             {
                 // 检查维持条件
-                if (buff.Data is BuffDataSO buffDataSO && buffDataSO.MaintainConditions.Count > 0)
+                if (buff.Data is BuffDataSO buffDataSO && !buffDataSO.MaintainConditions.CheckAllConditions(Owner, buff.Data))
                 {
-                    bool conditionsMet = true;
-                    foreach (var condition in buffDataSO.MaintainConditions)
+                    buff.MarkForRemoval();
+                    if (!removalQueue.Contains(buff.InstanceId))
                     {
-                        if (condition != null && !condition.Check(Owner, buff.Data))
-                        {
-                            conditionsMet = false;
-                            break;
-                        }
+                        removalQueue.Enqueue(buff.InstanceId);
                     }
-                    
-                    if (!conditionsMet)
-                    {
-                        buff.MarkForRemoval();
-                        if (!removalQueue.Contains(buff.InstanceId))
-                        {
-                            removalQueue.Enqueue(buff.InstanceId);
-                        }
-                        continue;
-                    }
+                    continue;
                 }
                 
                 buff.Update(deltaTime);

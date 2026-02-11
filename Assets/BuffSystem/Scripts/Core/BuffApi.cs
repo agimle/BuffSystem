@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Data;
+using BuffSystem.Utils;
 
 namespace BuffSystem.Core
 {
@@ -291,18 +292,7 @@ namespace BuffSystem.Core
         /// <returns>拥有该标签的所有Buff</returns>
         public static IEnumerable<IBuff> GetBuffsByTag(string tag, IBuffOwner target)
         {
-            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
-            {
-                yield break;
-            }
-
-            foreach (var buff in target.BuffContainer.AllBuffs)
-            {
-                if (buff.Data.HasTag(tag))
-                {
-                    yield return buff;
-                }
-            }
+            return target.GetBuffsByTag(tag);
         }
 
         /// <summary>
@@ -313,19 +303,7 @@ namespace BuffSystem.Core
         /// <param name="result">结果列表（会被清空）</param>
         public static void GetBuffsByTagNonAlloc(string tag, IBuffOwner target, List<IBuff> result)
         {
-            result.Clear();
-            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
-            {
-                return;
-            }
-
-            foreach (var buff in target.BuffContainer.AllBuffs)
-            {
-                if (buff.Data.HasTag(tag))
-                {
-                    result.Add(buff);
-                }
-            }
+            target?.BuffContainer?.AllBuffs.FilterByTagNonAlloc(tag, result);
         }
 
         /// <summary>
@@ -340,7 +318,7 @@ namespace BuffSystem.Core
                 return;
             }
 
-            var buffsToRemove = GetBuffsByTag(tag, target);
+            var buffsToRemove = target.GetBuffsByTag(tag);
             foreach (var buff in buffsToRemove)
             {
                 RemoveBuff(buff);
@@ -355,19 +333,7 @@ namespace BuffSystem.Core
         /// <returns>是否拥有</returns>
         public static bool HasBuffWithTag(string tag, IBuffOwner target)
         {
-            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
-            {
-                return false;
-            }
-
-            foreach (var buff in target.BuffContainer.AllBuffs)
-            {
-                if (buff.Data.HasTag(tag))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return target.HasBuffWithTag(tag);
         }
 
         /// <summary>
@@ -378,20 +344,7 @@ namespace BuffSystem.Core
         /// <returns>Buff数量</returns>
         public static int GetBuffCountByTag(string tag, IBuffOwner target)
         {
-            if (target?.BuffContainer == null || string.IsNullOrEmpty(tag))
-            {
-                return 0;
-            }
-
-            int count = 0;
-            foreach (var buff in target.BuffContainer.AllBuffs)
-            {
-                if (buff.Data.HasTag(tag))
-                {
-                    count++;
-                }
-            }
-            return count;
+            return target.GetBuffCountByTag(tag);
         }
 
         #endregion
