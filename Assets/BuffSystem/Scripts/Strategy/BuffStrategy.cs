@@ -1,4 +1,5 @@
 using BuffSystem.Core;
+using BuffSystem.Runtime;
 
 namespace BuffSystem.Strategy
 {
@@ -16,6 +17,13 @@ namespace BuffSystem.Strategy
         /// <param name="newData">新添加的Buff数据</param>
         /// <returns>是否创建新Buff</returns>
         bool HandleStack(IBuff existingBuff, IBuffData newData);
+        
+        /// <summary>
+        /// 是否需要刷新持续时间
+        /// </summary>
+        /// <param name="data">Buff数据</param>
+        /// <returns>是否需要刷新</returns>
+        bool ShouldRefresh(IBuffData data);
     }
     
     /// <summary>
@@ -28,6 +36,8 @@ namespace BuffSystem.Strategy
             existingBuff.AddStack(newData.AddStackCount);
             return false; // 不创建新Buff
         }
+        
+        public bool ShouldRefresh(IBuffData data) => false; // 可叠加策略不刷新持续时间
     }
     
     /// <summary>
@@ -37,12 +47,11 @@ namespace BuffSystem.Strategy
     {
         public bool HandleStack(IBuff existingBuff, IBuffData newData)
         {
-            if (newData.CanRefresh)
-            {
-                existingBuff.RefreshDuration();
-            }
+            // 叠层逻辑在HandleStack中处理，刷新逻辑由ShouldRefresh控制
             return false; // 不创建新Buff
         }
+        
+        public bool ShouldRefresh(IBuffData data) => data.CanRefresh;
     }
     
     /// <summary>
@@ -54,6 +63,8 @@ namespace BuffSystem.Strategy
         {
             return true; // 创建新Buff
         }
+        
+        public bool ShouldRefresh(IBuffData data) => false; // 独立策略不刷新
     }
     
     #endregion
@@ -112,9 +123,13 @@ namespace BuffSystem.Strategy
     public interface IRemoveStrategy
     {
         /// <summary>
-        /// 处理Buff过期/移除
+        /// 处理Buff过期
         /// </summary>
-        void HandleRemove(IBuff buff);
+        /// <param name="buff">Buff实例</param>
+        /// <param name="deltaTime">时间增量</param>
+        /// <param name="timer">计时器引用</param>
+        /// <returns>是否已处理完成（需要移除）</returns>
+        bool HandleExpiration(IBuff buff, float deltaTime, ref float timer);
     }
     
     /// <summary>
@@ -122,9 +137,10 @@ namespace BuffSystem.Strategy
     /// </summary>
     public class DirectRemoveStrategy : IRemoveStrategy
     {
-        public void HandleRemove(IBuff buff)
+        public bool HandleExpiration(IBuff buff, float deltaTime, ref float timer)
         {
             buff.MarkForRemoval();
+            return true;
         }
     }
     
@@ -133,20 +149,30 @@ namespace BuffSystem.Strategy
     /// </summary>
     public class ReduceStackStrategy : IRemoveStrategy
     {
-        private readonly int reduceAmount;
-        private readonly float interval;
-
-        public ReduceStackStrategy(int reduceAmount, float interval)
+        public bool HandleExpiration(IBuff buff, float deltaTime, ref float timer)
         {
-            this.reduceAmount = reduceAmount;
-            this.interval = interval;
-        }
-
-        public void HandleRemove(IBuff buff)
-        {
-            // 逐层移除策略的具体实现在 BuffEntity.HandleExpiration 中处理
-            // 这里只负责标记移除，实际消层逻辑由 BuffEntity 根据 RemoveInterval 控制
-            buff.MarkForRemoval();
+            float interval = buff.Data.RemoveInterval;
+            if (interval <= 0) interval = 0.1f; // 防止除零
+            
+            timer += deltaTime;
+            
+            while (timer >= interval && !buff.IsMarkedForRemoval)
+            {
+                timer -= interval;
+                
+                if (buff is BuffEntity entity)
+                {
+                    entity.RemoveStack(buff.Data.RemoveStackCount);
+                }
+                
+                // 如果层数为0或已标记移除，返回true表示处理完成
+                if (buff.CurrentStack <= 0 || buff.IsMarkedForRemoval)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
         }
     }
     
@@ -184,12 +210,12 @@ namespace BuffSystem.Strategy
         /// <summary>
         /// 创建移除策略
         /// </summary>
-        public static IRemoveStrategy CreateRemoveStrategy(BuffRemoveMode mode, int removeStack = 1, float interval = 0f)
+        public static IRemoveStrategy CreateRemoveStrategy(BuffRemoveMode mode)
         {
             return mode switch
             {
                 BuffRemoveMode.Remove => new DirectRemoveStrategy(),
-                BuffRemoveMode.Reduce => new ReduceStackStrategy(removeStack, interval),
+                BuffRemoveMode.Reduce => new ReduceStackStrategy(),
                 _ => new DirectRemoveStrategy()
             };
         }
