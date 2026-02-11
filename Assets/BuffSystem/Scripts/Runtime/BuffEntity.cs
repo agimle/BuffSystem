@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Strategy;
 
 namespace BuffSystem.Runtime
 {
@@ -30,6 +32,13 @@ namespace BuffSystem.Runtime
         
         // 逻辑实例
         private IBuffLogic logic;
+        
+        // 移除策略缓存
+        private static readonly Dictionary<BuffRemoveMode, IRemoveStrategy> removeStrategies = new()
+        {
+            [BuffRemoveMode.Remove] = new DirectRemoveStrategy(),
+            [BuffRemoveMode.Reduce] = new ReduceStackStrategy()
+        };
         
         #region IBuff Implementation
         
@@ -256,24 +265,9 @@ namespace BuffSystem.Runtime
         /// </summary>
         private void HandleExpiration(float deltaTime)
         {
-            if (data.RemoveMode == BuffRemoveMode.Remove)
+            if (removeStrategies.TryGetValue(data.RemoveMode, out var strategy))
             {
-                // 直接移除
-                MarkForRemoval();
-            }
-            else
-            {
-                // 逐层移除
-                removeIntervalTimer += deltaTime;
-                float interval = data.RemoveInterval;
-                
-                if (interval <= 0) interval = 0.1f; // 防止除零
-                
-                while (removeIntervalTimer >= interval && !isMarkedForRemoval)
-                {
-                    removeIntervalTimer -= interval;
-                    RemoveStack(data.RemoveStackCount);
-                }
+                strategy.HandleExpiration(this, deltaTime, ref removeIntervalTimer);
             }
         }
         

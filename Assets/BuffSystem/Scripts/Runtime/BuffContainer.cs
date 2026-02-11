@@ -5,6 +5,7 @@ using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Strategy;
 using BuffSystem.Utils;
 
 namespace BuffSystem.Runtime
@@ -33,6 +34,9 @@ namespace BuffSystem.Runtime
         // 空集合缓存（避免GC）
         private static readonly List<IBuff> EmptyBuffList = new();
         private static readonly List<BuffEntity> EmptyBuffEntityList = new();
+
+        // 策略缓存
+        private readonly Dictionary<BuffStackMode, IStackStrategy> stackStrategies;
 
         // 所属持有者
         public IBuffOwner Owner { get; }
@@ -86,6 +90,14 @@ namespace BuffSystem.Runtime
                 defaultCapacity: config.DefaultPoolCapacity,
                 maxSize: config.MaxPoolSize
             );
+            
+            // 初始化叠层策略
+            stackStrategies = new Dictionary<BuffStackMode, IStackStrategy>
+            {
+                [BuffStackMode.None] = new NonStackableStrategy(),
+                [BuffStackMode.Stackable] = new StackableStrategy(),
+                [BuffStackMode.Independent] = new IndependentStrategy()
+            };
         }
         
         #region Buff Management
@@ -102,19 +114,13 @@ namespace BuffSystem.Runtime
             }
             
             // 检查添加条件
-            if (data is BuffDataSO buffDataSO)
+            if (data is BuffDataSO buffDataSO && !buffDataSO.AddConditions.CheckAllConditions(Owner, data))
             {
-                foreach (var condition in buffDataSO.AddConditions)
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
                 {
-                    if (condition != null && !condition.Check(Owner, data))
-                    {
-                        if (Data.BuffSystemConfig.Instance.EnableDebugLog)
-                        {
-                            Debug.Log($"[BuffContainer] 添加Buff失败，条件不满足: {condition.Description}");
-                        }
-                        return null;
-                    }
+                    Debug.Log("[BuffContainer] 添加Buff失败，条件不满足");
                 }
+                return null;
             }
             
             // 处理依赖关系
@@ -168,24 +174,21 @@ namespace BuffSystem.Runtime
         /// </summary>
         private IBuff HandleExistingBuff(BuffEntity existingBuff, IBuffData data, object source)
         {
-            switch (data.StackMode)
+            // 使用策略模式处理叠层逻辑
+            if (stackStrategies.TryGetValue(data.StackMode, out var strategy))
             {
-                case BuffStackMode.Stackable:
-                    // 可叠加 - 增加层数
-                    existingBuff.AddStack(data.AddStackCount);
-                    break;
-                    
-                case BuffStackMode.None:
-                    // 不可叠加 - 刷新持续时间
-                    if (data.CanRefresh)
-                    {
-                        existingBuff.RefreshDuration();
-                    }
-                    break;
-                    
-                case BuffStackMode.Independent:
-                    // 独立模式 - 创建新实例（忽略唯一性）
+                bool shouldCreateNew = strategy.HandleStack(existingBuff, data);
+                
+                if (shouldCreateNew)
+                {
                     return CreateNewBuff(data, source);
+                }
+                
+                // 使用策略决定是否刷新持续时间
+                if (strategy.ShouldRefresh(data))
+                {
+                    existingBuff.RefreshDuration();
+                }
             }
             
             return existingBuff;
@@ -497,27 +500,14 @@ namespace BuffSystem.Runtime
             foreach (var buff in buffByInstanceId.Values)
             {
                 // 检查维持条件
-                if (buff.Data is BuffDataSO buffDataSO && buffDataSO.MaintainConditions.Count > 0)
+                if (buff.Data is BuffDataSO buffDataSO && !buffDataSO.MaintainConditions.CheckAllConditions(Owner, buff.Data))
                 {
-                    bool conditionsMet = true;
-                    foreach (var condition in buffDataSO.MaintainConditions)
+                    buff.MarkForRemoval();
+                    if (!removalQueue.Contains(buff.InstanceId))
                     {
-                        if (condition != null && !condition.Check(Owner, buff.Data))
-                        {
-                            conditionsMet = false;
-                            break;
-                        }
+                        removalQueue.Enqueue(buff.InstanceId);
                     }
-                    
-                    if (!conditionsMet)
-                    {
-                        buff.MarkForRemoval();
-                        if (!removalQueue.Contains(buff.InstanceId))
-                        {
-                            removalQueue.Enqueue(buff.InstanceId);
-                        }
-                        continue;
-                    }
+                    continue;
                 }
                 
                 buff.Update(deltaTime);
