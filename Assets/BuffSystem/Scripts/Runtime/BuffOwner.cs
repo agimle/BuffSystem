@@ -3,6 +3,7 @@ using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Combo;
 
 namespace BuffSystem.Runtime
 {
@@ -131,6 +132,12 @@ namespace BuffSystem.Runtime
 
         private void OnDestroy()
         {
+            // 清理Combo状态
+            if (BuffComboManager.Instance != null)
+            {
+                BuffComboManager.Instance.ClearOwnerCombos(this);
+            }
+
             // 清理所有Buff
             buffContainer?.ClearAllBuffs();
             buffContainer = null;
@@ -312,9 +319,53 @@ namespace BuffSystem.Runtime
         {
             return BuffApi.GetBuff(buffName, this, source);
         }
-        
+
         #endregion
-        
+
+        #region Combo Methods
+
+        /// <summary>
+        /// 检查是否激活了指定Combo
+        /// </summary>
+        public bool IsComboActive(int comboId)
+        {
+            return BuffComboManager.Instance?.IsComboActive(comboId, this) ?? false;
+        }
+
+        /// <summary>
+        /// 检查是否激活了指定Combo
+        /// </summary>
+        public bool IsComboActive(BuffComboData combo)
+        {
+            return combo != null && IsComboActive(combo.ComboId);
+        }
+
+        /// <summary>
+        /// 获取所有激活的Combo
+        /// </summary>
+        public IEnumerable<BuffComboData> GetActiveCombos()
+        {
+            return BuffComboManager.Instance?.GetActiveCombos(this) ?? System.Array.Empty<BuffComboData>();
+        }
+
+        /// <summary>
+        /// 获取Combo触发次数
+        /// </summary>
+        public int GetComboTriggerCount(int comboId)
+        {
+            return BuffComboManager.Instance?.GetTriggerCount(this, comboId) ?? 0;
+        }
+
+        /// <summary>
+        /// 获取Combo触发次数
+        /// </summary>
+        public int GetComboTriggerCount(BuffComboData combo)
+        {
+            return combo != null ? GetComboTriggerCount(combo.ComboId) : 0;
+        }
+
+        #endregion
+
         #region Debug
 
         private static readonly Rect debugWindowRect = new(10, 10, 250, 300);
@@ -338,6 +389,22 @@ namespace BuffSystem.Runtime
                 {
                     string timeText = buff.IsPermanent ? "∞" : $"{buff.RemainingTime:F1}s";
                     GUILayout.Label($"  • {buff.Name} ({buff.CurrentStack}/{buff.MaxStack}) [{timeText}]");
+                }
+            }
+
+            // 显示激活的Combo
+            var activeCombos = GetActiveCombos();
+            int comboCount = 0;
+            foreach (var _ in activeCombos) comboCount++;
+
+            if (comboCount > 0)
+            {
+                GUILayout.Space(5);
+                GUILayout.Label("<b>激活Combo:</b>");
+
+                foreach (var combo in GetActiveCombos())
+                {
+                    GUILayout.Label($"  • {combo.ComboName}");
                 }
             }
 
