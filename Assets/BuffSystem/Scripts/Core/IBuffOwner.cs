@@ -27,6 +27,29 @@ namespace BuffSystem.Core
         /// 当Buff事件发生时调用
         /// </summary>
         void OnBuffEvent(BuffEventType eventType, IBuff buff);
+        
+        #region Immunity System (v4.0)
+        
+        /// <summary>
+        /// 检查是否对指定Buff免疫
+        /// </summary>
+        /// <param name="buffId">Buff ID</param>
+        /// <returns>是否免疫</returns>
+        bool IsImmuneTo(int buffId);
+        
+        /// <summary>
+        /// 检查是否对指定标签免疫
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <returns>是否免疫</returns>
+        bool IsImmuneToTag(string tag);
+        
+        /// <summary>
+        /// 获取免疫标签列表
+        /// </summary>
+        IReadOnlyList<string> ImmuneTags { get; }
+        
+        #endregion
     }
     
     /// <summary>

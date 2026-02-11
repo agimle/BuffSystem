@@ -90,6 +90,29 @@ namespace BuffSystem.Runtime
                 return null;
             }
             
+            // v4.0: 免疫检查
+            if (Owner.IsImmuneTo(data.Id))
+            {
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                {
+                    Debug.Log($"[BuffContainer] {Owner.OwnerName} 免疫Buff {data.Name}({data.Id})");
+                }
+                return null;
+            }
+            
+            // v4.0: 检查标签免疫
+            foreach (var tag in data.Tags)
+            {
+                if (Owner.IsImmuneToTag(tag))
+                {
+                    if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                    {
+                        Debug.Log($"[BuffContainer] {Owner.OwnerName} 免疫标签 {tag} 的Buff {data.Name}");
+                    }
+                    return null;
+                }
+            }
+            
             // 检查添加条件
             if (data is BuffDataSO buffDataSO && !buffDataSO.AddConditions.CheckAllConditions(Owner, data))
             {
