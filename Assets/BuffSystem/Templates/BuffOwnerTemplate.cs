@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Events;
@@ -73,7 +74,19 @@ namespace MyNamespace
                     break;
             }
         }
-        
+
+        public bool IsImmuneTo(int buffId)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool IsImmuneToTag(string tag)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public IReadOnlyList<string> ImmuneTags { get; }
+
         #endregion
 
         #region IBuffEventReceiver 实现

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
@@ -20,12 +21,21 @@ namespace BuffSystem.Runtime
         [SerializeField] private bool updateInFixedUpdate = false;
         [SerializeField] private bool showDebugInfo = false;
 
+        [Header("免疫设置 (v4.0)")]
+        [SerializeField] private List<int> immuneBuffIds = new();
+        [SerializeField] private List<string> immuneTags = new();
+        [SerializeField] private bool removeExistingOnImmunity = true;
+
         // 静态列表 - 管理所有BuffOwner实例
         private static readonly List<BuffOwner> allOwners = new();
 
         // 内部组件
         private BuffContainer buffContainer;
         private BuffLocalEventSystem localEvents;
+        
+        // v4.0: 免疫系统的HashSet缓存（提高查询性能）
+        private HashSet<int> immuneBuffIdSet;
+        private HashSet<string> immuneTagSet;
         
         #region Properties
         
@@ -82,6 +92,20 @@ namespace BuffSystem.Runtime
                     break;
             }
         }
+        
+        // v4.0: 免疫系统实现
+        public bool IsImmuneTo(int buffId)
+        {
+            return immuneBuffIdSet?.Contains(buffId) ?? false;
+        }
+        
+        public bool IsImmuneToTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return false;
+            return immuneTagSet?.Contains(tag) ?? false;
+        }
+        
+        public IReadOnlyList<string> ImmuneTags => immuneTags;
         
         #endregion
         
@@ -220,6 +244,9 @@ namespace BuffSystem.Runtime
             buffContainer = new BuffContainer(this);
             localEvents = new BuffLocalEventSystem(this);
             
+            // v4.0: 初始化免疫系统
+            InitializeImmunity();
+            
             // 初始化Buff系统
             BuffApi.Initialize();
             
@@ -234,6 +261,15 @@ namespace BuffSystem.Runtime
             {
                 Debug.Log($"[BuffOwner] {gameObject.name} 初始化完成");
             }
+        }
+        
+        /// <summary>
+        /// v4.0: 初始化免疫系统
+        /// </summary>
+        private void InitializeImmunity()
+        {
+            immuneBuffIdSet = new HashSet<int>(immuneBuffIds);
+            immuneTagSet = new HashSet<string>(immuneTags);
         }
         
         #endregion
@@ -320,6 +356,133 @@ namespace BuffSystem.Runtime
             return BuffApi.GetBuff(buffName, this, source);
         }
 
+        #endregion
+
+        #region Immunity Methods (v4.0)
+        
+        /// <summary>
+        /// 添加对指定Buff的免疫
+        /// </summary>
+        /// <param name="buffId">Buff ID</param>
+        public void AddImmunity(int buffId)
+        {
+            if (immuneBuffIdSet.Add(buffId))
+            {
+                immuneBuffIds.Add(buffId);
+                
+                if (showDebugInfo)
+                {
+                    Debug.Log($"[BuffOwner] {gameObject.name} 添加对Buff {buffId} 的免疫");
+                }
+                
+                // 移除已存在的该Buff
+                if (removeExistingOnImmunity)
+                {
+                    RemoveBuff(buffId);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 移除对指定Buff的免疫
+        /// </summary>
+        /// <param name="buffId">Buff ID</param>
+        public void RemoveImmunity(int buffId)
+        {
+            if (immuneBuffIdSet.Remove(buffId))
+            {
+                immuneBuffIds.Remove(buffId);
+                
+                if (showDebugInfo)
+                {
+                    Debug.Log($"[BuffOwner] {gameObject.name} 移除对Buff {buffId} 的免疫");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 添加对指定标签的免疫
+        /// </summary>
+        /// <param name="tag">标签</param>
+        public void AddImmunityTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return;
+            
+            if (immuneTagSet.Add(tag))
+            {
+                immuneTags.Add(tag);
+                
+                if (showDebugInfo)
+                {
+                    Debug.Log($"[BuffOwner] {gameObject.name} 添加对标签 {tag} 的免疫");
+                }
+                
+                // 移除已存在的该标签的Buff
+                if (removeExistingOnImmunity)
+                {
+                    RemoveBuffsByTag(tag);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 移除对指定标签的免疫
+        /// </summary>
+        /// <param name="tag">标签</param>
+        public void RemoveImmunityTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag)) return;
+            
+            if (immuneTagSet.Remove(tag))
+            {
+                immuneTags.Remove(tag);
+                
+                if (showDebugInfo)
+                {
+                    Debug.Log($"[BuffOwner] {gameObject.name} 移除对标签 {tag} 的免疫");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 清空所有免疫
+        /// </summary>
+        public void ClearImmunity()
+        {
+            immuneBuffIdSet.Clear();
+            immuneBuffIds.Clear();
+            immuneTagSet.Clear();
+            immuneTags.Clear();
+            
+            if (showDebugInfo)
+            {
+                Debug.Log($"[BuffOwner] {gameObject.name} 清空所有免疫");
+            }
+        }
+        
+        /// <summary>
+        /// 根据标签移除Buff
+        /// </summary>
+        /// <param name="tag">标签</param>
+        private void RemoveBuffsByTag(string tag)
+        {
+            if (buffContainer == null) return;
+            
+            var buffsToRemove = new List<IBuff>();
+            foreach (var buff in buffContainer.AllBuffs)
+            {
+                if (buff.Data.Tags.Contains(tag))
+                {
+                    buffsToRemove.Add(buff);
+                }
+            }
+            
+            foreach (var buff in buffsToRemove)
+            {
+                RemoveBuff(buff);
+            }
+        }
+        
         #endregion
 
         #region Combo Methods

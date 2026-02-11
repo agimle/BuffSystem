@@ -26,10 +26,8 @@ namespace BuffSystem.Runtime
         // 对象池
         private readonly ObjectPool<BuffEntity> buffPool;
 
-        // Buff列表缓存（避免GC）
-        private readonly List<IBuff> buffCache = new();
-        private IReadOnlyCollection<IBuff> allBuffsReadOnly;
-        private bool isAllBuffsCacheValid;
+        // v4.0优化：使用自定义只读集合包装字典Values，避免缓存重建
+        private readonly BuffCollection allBuffsWrapper;
 
         // 空集合缓存（避免GC）
         private static readonly List<IBuff> EmptyBuffList = new();
@@ -42,33 +40,9 @@ namespace BuffSystem.Runtime
         public IBuffOwner Owner { get; }
 
         /// <summary>
-        /// 所有Buff（只读）
+        /// 所有Buff（只读）- v4.0优化：直接包装字典Values，无需缓存重建
         /// </summary>
-        public IReadOnlyCollection<IBuff> AllBuffs
-        {
-            get
-            {
-                if (!isAllBuffsCacheValid)
-                {
-                    buffCache.Clear();
-                    foreach (var buff in buffByInstanceId.Values)
-                    {
-                        buffCache.Add(buff);
-                    }
-                    allBuffsReadOnly = buffCache.AsReadOnly();
-                    isAllBuffsCacheValid = true;
-                }
-                return allBuffsReadOnly;
-            }
-        }
-
-        /// <summary>
-        /// 使AllBuffs缓存失效
-        /// </summary>
-        private void InvalidateAllBuffsCache()
-        {
-            isAllBuffsCacheValid = false;
-        }
+        public IReadOnlyCollection<IBuff> AllBuffs => allBuffsWrapper;
         
         /// <summary>
         /// 当前Buff数量
@@ -81,6 +55,9 @@ namespace BuffSystem.Runtime
         public BuffContainer(IBuffOwner owner)
         {
             Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            
+            // v4.0优化：初始化只读集合包装器
+            allBuffsWrapper = new BuffCollection(this);
             
             var config = Data.BuffSystemConfig.Instance;
             buffPool = new ObjectPool<BuffEntity>(
@@ -111,6 +88,29 @@ namespace BuffSystem.Runtime
             {
                 Debug.LogError("[BuffContainer] 尝试添加空的Buff数据");
                 return null;
+            }
+            
+            // v4.0: 免疫检查
+            if (Owner.IsImmuneTo(data.Id))
+            {
+                if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                {
+                    Debug.Log($"[BuffContainer] {Owner.OwnerName} 免疫Buff {data.Name}({data.Id})");
+                }
+                return null;
+            }
+            
+            // v4.0: 检查标签免疫
+            foreach (var tag in data.Tags)
+            {
+                if (Owner.IsImmuneToTag(tag))
+                {
+                    if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                    {
+                        Debug.Log($"[BuffContainer] {Owner.OwnerName} 免疫标签 {tag} 的Buff {data.Name}");
+                    }
+                    return null;
+                }
             }
             
             // 检查添加条件
@@ -330,9 +330,6 @@ namespace BuffSystem.Runtime
             // 触发全局事件
             BuffEventSystem.TriggerBuffAdded(buff);
             Owner.OnBuffEvent(BuffEventType.Added, buff);
-
-            // 使缓存失效
-            InvalidateAllBuffsCache();
 
             if (Data.BuffSystemConfig.Instance.EnableDebugLog)
             {
@@ -573,12 +570,6 @@ namespace BuffSystem.Runtime
                     Debug.Log($"[BuffContainer] 移除Buff: {buff.Name}");
                 }
             }
-
-            // 使缓存失效
-            if (removalQueue.Count == 0)
-            {
-                InvalidateAllBuffsCache();
-            }
         }
         
         #endregion
@@ -634,7 +625,43 @@ namespace BuffSystem.Runtime
         {
             return (buffPool.CountAll, buffPool.CountActive, buffPool.CountInactive);
         }
-        
+
+        #endregion
+
+        #region BuffCollection - v4.0优化：自定义只读集合
+
+        /// <summary>
+        /// 自定义只读集合，直接包装字典Values，避免缓存重建
+        /// </summary>
+        private class BuffCollection : IReadOnlyCollection<IBuff>
+        {
+            private readonly BuffContainer container;
+
+            public BuffCollection(BuffContainer container)
+            {
+                this.container = container;
+            }
+
+            /// <summary>
+            /// Buff数量 - 直接读取字典Count
+            /// </summary>
+            public int Count => container.buffByInstanceId.Count;
+
+            /// <summary>
+            /// 获取迭代器 - 直接遍历字典Values
+            /// </summary>
+            public IEnumerator<IBuff> GetEnumerator()
+            {
+                foreach (var buff in container.buffByInstanceId.Values)
+                {
+                    yield return buff;
+                }
+            }
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+                => GetEnumerator();
+        }
+
         #endregion
     }
 }
