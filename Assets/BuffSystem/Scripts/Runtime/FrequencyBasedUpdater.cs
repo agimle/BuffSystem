@@ -9,6 +9,10 @@ namespace BuffSystem.Runtime
     /// 分层频率更新器 - 根据Buff重要性使用不同更新频率，优化CPU性能
     /// </summary>
     /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v6.0 新增 - 支持自动频率分配
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// 
     /// 性能优化: 通过分层更新减少不必要的计算，可降低70% CPU使用
     /// 使用场景: 大量Buff同时存在的场景（如MOBA团战、MMO大规模战斗）
     /// </remarks>
@@ -74,13 +78,70 @@ namespace BuffSystem.Runtime
         {
             // 先移除已存在的注册
             Unregister(buff);
-            
+
             frequencyBuckets[(int)frequency].Add(buff);
-            
+
             if (BuffSystemConfig.Instance.EnableDebugLog)
             {
                 Debug.Log($"[FrequencyBasedUpdater] Buff '{buff.Name}' 注册到 {frequency} 更新频率");
             }
+        }
+
+        /// <summary>
+        /// 自动注册Buff - 根据Buff特性自动分配最佳更新频率
+        /// </summary>
+        /// <param name="buff">要注册的Buff</param>
+        /// <returns>分配的频率</returns>
+        public UpdateFrequency RegisterAuto(IBuff buff)
+        {
+            if (buff == null)
+                return UpdateFrequency.EveryFrame;
+
+            // 使用频率分配器计算最佳频率
+            var frequency = FrequencyAssigner.AssignFrequency(buff);
+
+            // 注册到对应频率桶
+            Register(buff, frequency);
+
+            return frequency;
+        }
+
+        /// <summary>
+        /// 批量自动注册Buff
+        /// </summary>
+        /// <param name="buffs">Buff列表</param>
+        /// <returns>Buff到频率的映射</returns>
+        public Dictionary<IBuff, UpdateFrequency> RegisterBatchAuto(IEnumerable<IBuff> buffs)
+        {
+            var result = new Dictionary<IBuff, UpdateFrequency>();
+
+            foreach (var buff in buffs)
+            {
+                if (buff != null)
+                {
+                    var frequency = RegisterAuto(buff);
+                    result[buff] = frequency;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 重新计算并更新Buff的频率分配
+        /// </summary>
+        /// <param name="buff">要重新分配的Buff</param>
+        /// <returns>新的频率</returns>
+        public UpdateFrequency ReassignFrequency(IBuff buff)
+        {
+            if (buff == null)
+                return UpdateFrequency.EveryFrame;
+
+            // 先注销
+            Unregister(buff);
+
+            // 重新分配
+            return RegisterAuto(buff);
         }
         
         /// <summary>
@@ -208,18 +269,27 @@ namespace BuffSystem.Runtime
         {
             // 获取Buff的Owner，然后通过Owner的Container来更新
             var owner = buff.Owner;
-            if (owner?.BuffContainer is BuffContainer container)
+            if (owner == null) return;
+
+            var container = owner.BuffContainer;
+            if (container == null) return;
+
+            // 对于结构体化容器，Buff的更新由容器统一处理
+            // 这里只需要触发Buff包装器的更新逻辑
+            var buffType = buff.GetType();
+            var updateMethod = buffType.GetMethod("Update", System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic);
+
+            if (updateMethod != null)
             {
-                // 只更新单个Buff的持续时间，不触发完整的Container更新
-                // 这里使用反射来调用BuffEntity的Update方法
-                var buffType = buff.GetType();
-                var updateMethod = buffType.GetMethod("Update", System.Reflection.BindingFlags.Instance | 
-                    System.Reflection.BindingFlags.Public | 
-                    System.Reflection.BindingFlags.NonPublic);
-                
-                if (updateMethod != null)
+                try
                 {
                     updateMethod.Invoke(buff, new object[] { deltaTime });
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[FrequencyBasedUpdater] 反射更新Buff失败: {e.Message}");
                 }
             }
         }

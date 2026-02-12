@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Data;
 
@@ -190,12 +191,61 @@ namespace BuffSystem.Runtime
         }
 
         /// <summary>
+        /// 自动注册Buff - 根据Buff特性自动分配最佳更新频率
+        /// </summary>
+        /// <param name="buff">要注册的Buff</param>
+        /// <returns>分配的频率</returns>
+        public static UpdateFrequency RegisterBuffAuto(Core.IBuff buff)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return UpdateFrequency.EveryFrame;
+
+            // 如果启用了自动分配，使用自动分配
+            if (instance.autoAssignFrequency)
+            {
+                return instance.frequencyUpdater.RegisterAuto(buff);
+            }
+            else
+            {
+                // 默认使用每帧更新
+                instance.frequencyUpdater.Register(buff, UpdateFrequency.EveryFrame);
+                return UpdateFrequency.EveryFrame;
+            }
+        }
+
+        /// <summary>
+        /// 批量自动注册Buff
+        /// </summary>
+        /// <param name="buffs">Buff列表</param>
+        /// <returns>Buff到频率的映射</returns>
+        public static Dictionary<Core.IBuff, UpdateFrequency> RegisterBuffsAuto(IEnumerable<Core.IBuff> buffs)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return new Dictionary<Core.IBuff, UpdateFrequency>();
+
+            return instance.frequencyUpdater.RegisterBatchAuto(buffs);
+        }
+
+        /// <summary>
         /// 从分层更新器注销Buff
         /// </summary>
         public static void UnregisterBuff(Core.IBuff buff)
         {
             if (instance == null || instance.frequencyUpdater == null) return;
             instance.frequencyUpdater.Unregister(buff);
+        }
+
+        /// <summary>
+        /// 重新计算并更新Buff的频率分配
+        /// </summary>
+        /// <param name="buff">要重新分配的Buff</param>
+        /// <returns>新的频率</returns>
+        public static UpdateFrequency ReassignBuffFrequency(Core.IBuff buff)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return UpdateFrequency.EveryFrame;
+
+            return instance.frequencyUpdater.ReassignFrequency(buff);
         }
 
         /// <summary>

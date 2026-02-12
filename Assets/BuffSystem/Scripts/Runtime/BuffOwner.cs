@@ -148,7 +148,7 @@ namespace BuffSystem.Runtime
                 // Buff的更新由FrequencyBasedUpdater管理
                 if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
                 {
-                    buffContainer.UpdateMaintainConditionsAndRemoval();
+                    UpdateMaintainConditionsAndRemoval();
                 }
                 else
                 {
@@ -168,12 +168,33 @@ namespace BuffSystem.Runtime
                 // Buff的更新由FrequencyBasedUpdater管理
                 if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
                 {
-                    buffContainer.UpdateMaintainConditionsAndRemoval();
+                    UpdateMaintainConditionsAndRemoval();
                 }
                 else
                 {
                     buffContainer.Update(Time.fixedDeltaTime);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 更新维持条件检查和移除队列（用于分层更新模式）
+        /// </summary>
+        private void UpdateMaintainConditionsAndRemoval()
+        {
+            // 对于BuffContainer，调用其内部方法
+            if (buffContainer is BuffContainer container)
+            {
+                container.UpdateMaintainConditionsAndRemoval();
+            }
+            // 对于BuffContainerOptimized和BuffContainerNativeArray，
+            // 它们的Update方法已经包含了维持条件检查和移除队列处理
+            // 所以在分层更新模式下，我们只需要调用Update(0)来触发这些处理
+            else if (buffContainer is BuffContainerOptimized || buffContainer is BuffContainerNativeArray)
+            {
+                // 这些容器在Update中已经处理了移除队列
+                // 在分层更新模式下，它们只处理移除逻辑，不更新Buff时间
+                buffContainer.Update(0f);
             }
         }
 

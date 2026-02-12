@@ -106,11 +106,11 @@ namespace BuffSystem.Runtime
             {
                 startLogic.OnStart();
             }
-            
-            // 注册到分层更新器
+
+            // 注册到分层更新器（使用自动频率分配）
             if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
             {
-                BuffSystemUpdater.RegisterBuff(this, data.UpdateFrequency);
+                BuffSystemUpdater.RegisterBuffAuto(this);
             }
         }
         
