@@ -5,6 +5,7 @@ using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Groups;
 using BuffSystem.Modifiers;
 using BuffSystem.Strategy;
 using BuffSystem.Utils;
@@ -41,6 +42,9 @@ namespace BuffSystem.Runtime
 
         // 策略缓存
         private readonly Dictionary<BuffStackMode, IStackStrategy> stackStrategies;
+        
+        // Buff组管理
+        private readonly Dictionary<string, IBuffGroup> buffGroups = new();
 
         // 所属持有者
         public IBuffOwner Owner { get; }
@@ -672,6 +676,9 @@ namespace BuffSystem.Runtime
                     }
                 }
                 
+                // 从所有组中移除
+                RemoveBuffFromAllGroups(buff);
+                
                 // 触发事件
                 BuffEventSystem.TriggerBuffRemoved(buff);
                 Owner.OnBuffEvent(BuffEventType.Removed, buff);
@@ -744,6 +751,132 @@ namespace BuffSystem.Runtime
             return (buffPool.CountAll, buffPool.CountActive, buffPool.CountInactive);
         }
 
+        #endregion
+        
+        #region Buff Groups
+        
+        /// <summary>
+        /// 注册Buff组
+        /// </summary>
+        /// <param name="group">Buff组</param>
+        public void RegisterBuffGroup(IBuffGroup group)
+        {
+            if (group == null) return;
+            buffGroups[group.GroupId] = group;
+        }
+        
+        /// <summary>
+        /// 获取Buff组
+        /// </summary>
+        /// <param name="groupId">组ID</param>
+        /// <returns>Buff组，不存在返回null</returns>
+        public IBuffGroup GetBuffGroup(string groupId)
+        {
+            buffGroups.TryGetValue(groupId, out var group);
+            return group;
+        }
+        
+        /// <summary>
+        /// 移除Buff组
+        /// </summary>
+        /// <param name="groupId">组ID</param>
+        public void RemoveBuffGroup(string groupId)
+        {
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.Clear();
+                buffGroups.Remove(groupId);
+            }
+        }
+        
+        /// <summary>
+        /// 检查是否存在指定组
+        /// </summary>
+        public bool HasBuffGroup(string groupId)
+        {
+            return buffGroups.ContainsKey(groupId);
+        }
+        
+        /// <summary>
+        /// 获取所有组ID
+        /// </summary>
+        public IEnumerable<string> GetAllGroupIds()
+        {
+            return buffGroups.Keys;
+        }
+        
+        /// <summary>
+        /// 将Buff添加到组
+        /// </summary>
+        /// <param name="buff">Buff实例</param>
+        /// <param name="groupId">组ID</param>
+        /// <returns>是否成功添加</returns>
+        public bool AddBuffToGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return false;
+            
+            if (!buffGroups.TryGetValue(groupId, out var group))
+            {
+                // 自动创建组（使用默认配置）
+                group = new BuffGroup(groupId);
+                buffGroups[groupId] = group;
+            }
+            
+            return group.AddToGroup(buff);
+        }
+        
+        /// <summary>
+        /// 从组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return;
+            
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 从所有组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromAllGroups(IBuff buff)
+        {
+            if (buff == null) return;
+            
+            foreach (var group in buffGroups.Values)
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 获取Buff所在的所有组
+        /// </summary>
+        public IEnumerable<IBuffGroup> GetBuffGroups(IBuff buff)
+        {
+            if (buff == null) yield break;
+            
+            foreach (var group in buffGroups.Values)
+            {
+                if (group.Contains(buff))
+                    yield return group;
+            }
+        }
+        
+        /// <summary>
+        /// 清空所有组
+        /// </summary>
+        public void ClearAllGroups()
+        {
+            foreach (var group in buffGroups.Values)
+            {
+                group.Clear();
+            }
+            buffGroups.Clear();
+        }
+        
         #endregion
 
         #region BuffCollection - v4.0优化：自定义只读集合
