@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BuffSystem.Events;
+using BuffSystem.Groups;
 using BuffSystem.Modifiers;
 
 namespace BuffSystem.Core
@@ -144,5 +145,49 @@ namespace BuffSystem.Core
         /// 每帧更新
         /// </summary>
         void Update(float deltaTime);
+        
+        #region Buff Groups
+        
+        /// <summary>
+        /// 注册Buff组
+        /// </summary>
+        void RegisterBuffGroup(IBuffGroup group);
+        
+        /// <summary>
+        /// 获取Buff组
+        /// </summary>
+        IBuffGroup GetBuffGroup(string groupId);
+        
+        /// <summary>
+        /// 移除Buff组
+        /// </summary>
+        void RemoveBuffGroup(string groupId);
+        
+        /// <summary>
+        /// 检查是否存在指定组
+        /// </summary>
+        bool HasBuffGroup(string groupId);
+        
+        /// <summary>
+        /// 将Buff添加到组
+        /// </summary>
+        bool AddBuffToGroup(IBuff buff, string groupId);
+        
+        /// <summary>
+        /// 从组中移除Buff
+        /// </summary>
+        void RemoveBuffFromGroup(IBuff buff, string groupId);
+        
+        /// <summary>
+        /// 从所有组中移除Buff
+        /// </summary>
+        void RemoveBuffFromAllGroups(IBuff buff);
+        
+        /// <summary>
+        /// 清空所有组
+        /// </summary>
+        void ClearAllGroups();
+        
+        #endregion
     }
 }

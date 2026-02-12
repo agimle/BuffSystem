@@ -97,6 +97,13 @@ namespace BuffSystem.Runtime
             container.GetDataRef(index) = data;
         }
         
+        public void SetDuration(float newDuration)
+        {
+            var data = BuffStruct;
+            data.TotalDuration = newDuration;
+            container.GetDataRef(index) = data;
+        }
+        
         public void MarkForRemoval()
         {
             var data = BuffStruct;

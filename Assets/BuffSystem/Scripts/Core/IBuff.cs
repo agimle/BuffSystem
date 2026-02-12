@@ -117,6 +117,12 @@ namespace BuffSystem.Core
         void RefreshDuration();
         
         /// <summary>
+        /// 设置持续时间
+        /// </summary>
+        /// <param name="newDuration">新的持续时间</param>
+        void SetDuration(float newDuration);
+        
+        /// <summary>
         /// 标记为移除
         /// </summary>
         void MarkForRemoval();

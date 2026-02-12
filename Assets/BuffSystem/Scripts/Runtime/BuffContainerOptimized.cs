@@ -4,6 +4,7 @@ using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Groups;
 using BuffSystem.Modifiers;
 
 namespace BuffSystem.Runtime
@@ -38,6 +39,9 @@ namespace BuffSystem.Runtime
         public IReadOnlyCollection<IBuff> AllBuffs => GetAllBuffsWrapper();
         
         private static int globalInstanceId;
+        
+        // Buff组管理
+        private readonly Dictionary<string, IBuffGroup> buffGroups = new();
         
         public BuffContainerOptimized(IBuffOwner owner, int initialCapacity = DefaultCapacity)
         {
@@ -460,6 +464,102 @@ namespace BuffSystem.Runtime
                 result.Add(new BuffDataWrapper(this, index));
             }
             return result.AsReadOnly();
+        }
+        
+        #endregion
+        
+        #region Buff Groups
+        
+        /// <summary>
+        /// 注册Buff组
+        /// </summary>
+        public void RegisterBuffGroup(IBuffGroup group)
+        {
+            if (group == null) return;
+            buffGroups[group.GroupId] = group;
+        }
+        
+        /// <summary>
+        /// 获取Buff组
+        /// </summary>
+        public IBuffGroup GetBuffGroup(string groupId)
+        {
+            buffGroups.TryGetValue(groupId, out var group);
+            return group;
+        }
+        
+        /// <summary>
+        /// 移除Buff组
+        /// </summary>
+        public void RemoveBuffGroup(string groupId)
+        {
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.Clear();
+                buffGroups.Remove(groupId);
+            }
+        }
+        
+        /// <summary>
+        /// 检查是否存在指定组
+        /// </summary>
+        public bool HasBuffGroup(string groupId)
+        {
+            return buffGroups.ContainsKey(groupId);
+        }
+        
+        /// <summary>
+        /// 将Buff添加到组
+        /// </summary>
+        public bool AddBuffToGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return false;
+            
+            if (!buffGroups.TryGetValue(groupId, out var group))
+            {
+                group = new BuffGroup(groupId);
+                buffGroups[groupId] = group;
+            }
+            
+            return group.AddToGroup(buff);
+        }
+        
+        /// <summary>
+        /// 从组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return;
+            
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 从所有组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromAllGroups(IBuff buff)
+        {
+            if (buff == null) return;
+            
+            foreach (var group in buffGroups.Values)
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 清空所有组
+        /// </summary>
+        public void ClearAllGroups()
+        {
+            foreach (var group in buffGroups.Values)
+            {
+                group.Clear();
+            }
+            buffGroups.Clear();
         }
         
         #endregion
