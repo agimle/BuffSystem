@@ -21,6 +21,8 @@ namespace BuffSystem.Data
         [Header("预热设置")] [SerializeField] private bool prewarmOnInitialize = true;
         [SerializeField] private int prewarmCount = 32;
 
+        [Header("传播设置")] [SerializeField] private int transmissionMaxPerFrame = 10;
+
         [Header("调试设置")] [SerializeField] private bool enableDebugLog = false;
         [SerializeField] private bool enableGizmos = false;
 
@@ -80,6 +82,11 @@ namespace BuffSystem.Data
         /// 预热数量
         /// </summary>
         public int PrewarmCount => prewarmCount;
+
+        /// <summary>
+        /// 每帧最大传播处理数量
+        /// </summary>
+        public int TransmissionMaxPerFrame => transmissionMaxPerFrame;
 
         #endregion
 
