@@ -8,6 +8,7 @@ namespace BuffSystem.Core
     /// 版本历史: v1.0-v6.0 逐步完善
     /// 修改策略: 只允许bug修复，不允许破坏性变更
     /// </remarks>
+    [StableApi("6.0", VersionHistory = "v1.0-v6.0 逐步完善")]
     public interface IBuff
     {
         /// <summary>
@@ -114,6 +115,12 @@ namespace BuffSystem.Core
         /// 刷新持续时间
         /// </summary>
         void RefreshDuration();
+        
+        /// <summary>
+        /// 设置持续时间
+        /// </summary>
+        /// <param name="newDuration">新的持续时间</param>
+        void SetDuration(float newDuration);
         
         /// <summary>
         /// 标记为移除

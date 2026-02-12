@@ -311,7 +311,7 @@ namespace BuffSystem.Runtime
         /// 设置持续时间（用于网络同步和存档恢复）
         /// </summary>
         /// <param name="newDuration">新的持续时间值</param>
-        internal void SetDuration(float newDuration)
+        public void SetDuration(float newDuration)
         {
             duration = Mathf.Max(0, newDuration);
             

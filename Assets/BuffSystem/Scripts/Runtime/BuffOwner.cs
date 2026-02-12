@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using BuffSystem.Advanced.Combo;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
-using BuffSystem.Combo;
+
+// v7.0: 推荐使用 BuffSystemManager.Combo 访问 Combo 管理器
 
 namespace BuffSystem.Runtime
 {
@@ -341,7 +343,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff AddBuff(int buffId, object source = null)
         {
-            return BuffApi.AddBuff(buffId, this, source);
+            return BuffApi.AddBuff(buffId, this, source: source);
         }
         
         /// <summary>
@@ -349,7 +351,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff AddBuff(string buffName, object source = null)
         {
-            return BuffApi.AddBuff(buffName, this, source);
+            return BuffApi.AddBuff(buffName, this, source: source);
         }
         
         /// <summary>

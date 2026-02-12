@@ -5,6 +5,8 @@ using Unity.Collections;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Groups;
+using BuffSystem.Modifiers;
 
 namespace BuffSystem.Runtime
 {
@@ -59,6 +61,9 @@ namespace BuffSystem.Runtime
 
         private static int globalInstanceId;
 
+        // Buff组管理
+        private readonly Dictionary<string, IBuffGroup> buffGroups = new();
+
         public BuffContainerNativeArray(IBuffOwner owner, int initialCapacity = DefaultCapacity)
         {
             Owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -88,6 +93,14 @@ namespace BuffSystem.Runtime
         /// 添加Buff - O(1) amortized
         /// </summary>
         public IBuff AddBuff(IBuffData data, object source = null)
+        {
+            return AddBuff(data, source, null);
+        }
+        
+        /// <summary>
+        /// 添加Buff（带修饰器）- O(1) amortized
+        /// </summary>
+        public IBuff AddBuff(IBuffData data, object source, IEnumerable<IBuffModifier> modifiers)
         {
             if (data == null) return null;
 
@@ -122,15 +135,48 @@ namespace BuffSystem.Runtime
                 return null;
             }
 
+            // 计算修饰器效果
+            float durationMultiplier = 1f;
+            int stackModifier = 0;
+            
+            if (modifiers != null)
+            {
+                var modifierList = new List<IBuffModifier>(modifiers);
+                
+                // 按优先级排序
+                modifierList.Sort((a, b) => 
+                {
+                    int priorityA = a is BuffModifier bmA ? bmA.Priority : 0;
+                    int priorityB = b is BuffModifier bmB ? bmB.Priority : 0;
+                    return priorityB.CompareTo(priorityA);
+                });
+                
+                foreach (var modifier in modifierList)
+                {
+                    durationMultiplier *= modifier.DurationMultiplier;
+                    if (modifier.StackMultiplier != 1f)
+                    {
+                        stackModifier += Mathf.RoundToInt(data.AddStackCount * (modifier.StackMultiplier - 1f));
+                    }
+                    modifier.OnBeforeApply(null);
+                }
+            }
+            
+            // 计算最终持续时间
+            float totalDuration = data.Duration * durationMultiplier;
+            
+            // 计算最终层数
+            int finalStack = data.AddStackCount + stackModifier;
+
             // 创建Buff数据
             var buffData = new BuffDataStruct
             {
                 InstanceId = GenerateInstanceId(),
                 DataId = data.Id,
-                CurrentStack = (short)data.AddStackCount,
+                CurrentStack = (short)finalStack,
                 MaxStack = (short)data.MaxStack,
                 Duration = 0f,
-                TotalDuration = data.Duration,
+                TotalDuration = totalDuration,
                 OwnerId = Owner.OwnerId,
                 SourceId = source?.GetHashCode() ?? 0,
                 Flags = BuildFlags(data)
@@ -148,6 +194,15 @@ namespace BuffSystem.Runtime
                 dataIdToIndices[data.Id] = indices;
             }
             indices.Add(index);
+
+            // 触发修饰器后回调
+            if (modifiers != null)
+            {
+                foreach (var modifier in modifiers)
+                {
+                    modifier.OnAfterApply(null);
+                }
+            }
 
             // 触发事件
             BuffEventSystem.TriggerBuffAdded(new BuffDataWrapperNative(this, index));
@@ -490,6 +545,102 @@ namespace BuffSystem.Runtime
         }
 
         #endregion
+        
+        #region Buff Groups
+        
+        /// <summary>
+        /// 注册Buff组
+        /// </summary>
+        public void RegisterBuffGroup(IBuffGroup group)
+        {
+            if (group == null) return;
+            buffGroups[group.GroupId] = group;
+        }
+        
+        /// <summary>
+        /// 获取Buff组
+        /// </summary>
+        public IBuffGroup GetBuffGroup(string groupId)
+        {
+            buffGroups.TryGetValue(groupId, out var group);
+            return group;
+        }
+        
+        /// <summary>
+        /// 移除Buff组
+        /// </summary>
+        public void RemoveBuffGroup(string groupId)
+        {
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.Clear();
+                buffGroups.Remove(groupId);
+            }
+        }
+        
+        /// <summary>
+        /// 检查是否存在指定组
+        /// </summary>
+        public bool HasBuffGroup(string groupId)
+        {
+            return buffGroups.ContainsKey(groupId);
+        }
+        
+        /// <summary>
+        /// 将Buff添加到组
+        /// </summary>
+        public bool AddBuffToGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return false;
+            
+            if (!buffGroups.TryGetValue(groupId, out var group))
+            {
+                group = new BuffGroup(groupId);
+                buffGroups[groupId] = group;
+            }
+            
+            return group.AddToGroup(buff);
+        }
+        
+        /// <summary>
+        /// 从组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromGroup(IBuff buff, string groupId)
+        {
+            if (buff == null || string.IsNullOrEmpty(groupId)) return;
+            
+            if (buffGroups.TryGetValue(groupId, out var group))
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 从所有组中移除Buff
+        /// </summary>
+        public void RemoveBuffFromAllGroups(IBuff buff)
+        {
+            if (buff == null) return;
+            
+            foreach (var group in buffGroups.Values)
+            {
+                group.RemoveFromGroup(buff);
+            }
+        }
+        
+        /// <summary>
+        /// 清空所有组
+        /// </summary>
+        public void ClearAllGroups()
+        {
+            foreach (var group in buffGroups.Values)
+            {
+                group.Clear();
+            }
+            buffGroups.Clear();
+        }
+        
+        #endregion
     }
 
     /// <summary>
@@ -544,6 +695,13 @@ namespace BuffSystem.Runtime
         {
             var data = container.GetData(index);
             data.Duration = 0f;
+            container.SetData(index, data);
+        }
+
+        public void SetDuration(float newDuration)
+        {
+            var data = container.GetData(index);
+            data.TotalDuration = newDuration;
             container.SetData(index, data);
         }
 

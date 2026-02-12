@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Data;
+using BuffSystem.Modifiers;
 using BuffSystem.Utils;
 
 namespace BuffSystem.Core
@@ -14,6 +15,7 @@ namespace BuffSystem.Core
     /// 版本历史: v1.0-v6.0 逐步完善
     /// 修改策略: 只允许bug修复，不允许破坏性变更
     /// </remarks>
+    [StableApi("6.0", VersionHistory = "v1.0-v6.0 逐步完善")]
     public static class BuffApi
     {
         #region Initialization
@@ -125,6 +127,93 @@ namespace BuffSystem.Core
 
             return target.BuffContainer.AddBuff(data, source);
         }
+
+        #region Add Buff with Modifiers
+
+        /// <summary>
+        /// 添加Buff（通过ID，带修饰器）
+        /// </summary>
+        /// <param name="buffId">Buff配置ID</param>
+        /// <param name="target">目标持有者</param>
+        /// <param name="modifiers">修饰器列表</param>
+        /// <param name="source">Buff来源（可选）</param>
+        /// <returns>创建的Buff实例，失败返回null</returns>
+        public static IBuff AddBuff(int buffId, IBuffOwner target, IEnumerable<IBuffModifier> modifiers, object source = null)
+        {
+            EnsureInitialized();
+
+            if (target == null)
+            {
+                Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
+                return null;
+            }
+
+            var data = BuffDatabase.Instance.GetBuffData(buffId);
+            if (data == null)
+            {
+                Debug.LogError($"[BuffApi] 添加Buff失败：未找到ID为 {buffId} 的Buff配置");
+                return null;
+            }
+
+            return target.BuffContainer.AddBuff(data, source, modifiers);
+        }
+
+        /// <summary>
+        /// 添加Buff（通过名称，带修饰器）
+        /// </summary>
+        /// <param name="buffName">Buff名称</param>
+        /// <param name="target">目标持有者</param>
+        /// <param name="modifiers">修饰器列表</param>
+        /// <param name="source">Buff来源（可选）</param>
+        /// <returns>创建的Buff实例，失败返回null</returns>
+        public static IBuff AddBuff(string buffName, IBuffOwner target, IEnumerable<IBuffModifier> modifiers, object source = null)
+        {
+            EnsureInitialized();
+
+            if (target == null)
+            {
+                Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
+                return null;
+            }
+
+            var data = BuffDatabase.Instance.GetBuffData(buffName);
+            if (data == null)
+            {
+                Debug.LogError($"[BuffApi] 添加Buff失败：未找到名称为 '{buffName}' 的Buff配置");
+                return null;
+            }
+
+            return target.BuffContainer.AddBuff(data, source, modifiers);
+        }
+
+        /// <summary>
+        /// 添加Buff（通过数据，带修饰器）
+        /// </summary>
+        /// <param name="data">Buff数据</param>
+        /// <param name="target">目标持有者</param>
+        /// <param name="modifiers">修饰器列表</param>
+        /// <param name="source">Buff来源（可选）</param>
+        /// <returns>创建的Buff实例，失败返回null</returns>
+        public static IBuff AddBuff(IBuffData data, IBuffOwner target, IEnumerable<IBuffModifier> modifiers, object source = null)
+        {
+            EnsureInitialized();
+
+            if (data == null)
+            {
+                Debug.LogError("[BuffApi] 添加Buff失败：数据为空");
+                return null;
+            }
+
+            if (target == null)
+            {
+                Debug.LogError("[BuffApi] 添加Buff失败：目标为空");
+                return null;
+            }
+
+            return target.BuffContainer.AddBuff(data, source, modifiers);
+        }
+
+        #endregion
 
         /// <summary>
         /// 尝试添加Buff（通过ID）
