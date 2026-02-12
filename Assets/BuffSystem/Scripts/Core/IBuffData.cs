@@ -5,6 +5,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff数据接口 - 配置数据的抽象
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuffData
     {
         /// <summary>
@@ -107,6 +112,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff叠加模式
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public enum BuffStackMode
     {
         /// <summary>
@@ -128,6 +138,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff移除模式
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public enum BuffRemoveMode
     {
         /// <summary>

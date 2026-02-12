@@ -3,6 +3,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff实例接口 - 运行时Buff实体的抽象
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuff
     {
         /// <summary>

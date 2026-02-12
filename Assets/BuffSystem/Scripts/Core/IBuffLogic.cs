@@ -4,6 +4,11 @@ namespace BuffSystem.Core
     /// Buff逻辑基接口
     /// 所有Buff逻辑类都需要实现此接口
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuffLogic
     {
         /// <summary>

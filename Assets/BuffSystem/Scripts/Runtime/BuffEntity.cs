@@ -13,6 +13,11 @@ namespace BuffSystem.Runtime
     /// Buff实体 - 运行时的Buff实例
     /// 使用对象池复用
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public class BuffEntity : IBuff
     {
         private static int globalInstanceId;
