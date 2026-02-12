@@ -343,7 +343,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff AddBuff(int buffId, object source = null)
         {
-            return BuffApi.AddBuff(buffId, this, source);
+            return BuffApi.AddBuff(buffId, this, source: source);
         }
         
         /// <summary>
@@ -351,7 +351,7 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff AddBuff(string buffName, object source = null)
         {
-            return BuffApi.AddBuff(buffName, this, source);
+            return BuffApi.AddBuff(buffName, this, source: source);
         }
         
         /// <summary>

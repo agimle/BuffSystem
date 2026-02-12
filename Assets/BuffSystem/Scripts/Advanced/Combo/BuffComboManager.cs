@@ -279,7 +279,7 @@ namespace BuffSystem.Advanced.Combo
             // 触发新Buff
             if (combo.HasTriggerBuff && !wasActive)
             {
-                BuffApi.AddBuff(combo.TriggerBuffId, owner, this);
+                BuffApi.AddBuff(combo.TriggerBuffId, owner, source: this);
             }
 
             // 触发全局事件
@@ -484,7 +484,7 @@ namespace BuffSystem.Advanced.Combo
         {
             if (effect.ExtraBuffId > 0)
             {
-                BuffApi.AddBuff(effect.ExtraBuffId, owner, this);
+                BuffApi.AddBuff(effect.ExtraBuffId, owner, source: this);
             }
         }
 

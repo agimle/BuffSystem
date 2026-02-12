@@ -5,6 +5,7 @@ using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Modifiers;
 using BuffSystem.Strategy;
 using BuffSystem.Utils;
 
@@ -88,6 +89,14 @@ namespace BuffSystem.Runtime
         /// 添加Buff
         /// </summary>
         public IBuff AddBuff(IBuffData data, object source = null)
+        {
+            return AddBuff(data, source, null);
+        }
+        
+        /// <summary>
+        /// 添加Buff（带修饰器）
+        /// </summary>
+        public IBuff AddBuff(IBuffData data, object source, IEnumerable<IBuffModifier> modifiers)
         {
             if (data == null)
             {
@@ -302,9 +311,65 @@ namespace BuffSystem.Runtime
         /// </summary>
         private IBuff CreateNewBuff(IBuffData data, object source)
         {
+            return CreateNewBuff(data, source, null);
+        }
+        
+        /// <summary>
+        /// 创建新Buff实例（带修饰器）
+        /// </summary>
+        private IBuff CreateNewBuff(IBuffData data, object source, IEnumerable<IBuffModifier> modifiers)
+        {
             // 从对象池获取
             BuffEntity buff = buffPool.Get();
+            
+            // 应用修饰器
+            float durationMultiplier = 1f;
+            int stackModifier = 0;
+            
+            if (modifiers != null)
+            {
+                var modifierList = new List<IBuffModifier>(modifiers);
+                
+                // 按优先级排序
+                modifierList.Sort((a, b) => 
+                {
+                    int priorityA = a is BuffModifier bmA ? bmA.Priority : 0;
+                    int priorityB = b is BuffModifier bmB ? bmB.Priority : 0;
+                    return priorityB.CompareTo(priorityA);
+                });
+                
+                // 计算修饰器效果
+                foreach (var modifier in modifierList)
+                {
+                    if (modifier.CanModify(buff))
+                    {
+                        durationMultiplier *= modifier.DurationMultiplier;
+                        
+                        // 层数修饰器影响初始层数
+                        if (modifier.StackMultiplier != 1f)
+                        {
+                            stackModifier += Mathf.RoundToInt(data.AddStackCount * (modifier.StackMultiplier - 1f));
+                        }
+                        
+                        modifier.OnBeforeApply(buff);
+                    }
+                }
+            }
+            
             buff.Reset(data, Owner, source);
+            
+            // 应用持续时间修饰
+            if (durationMultiplier != 1f && !buff.IsPermanent)
+            {
+                float modifiedDuration = buff.TotalDuration * durationMultiplier;
+                buff.SetDuration(modifiedDuration);
+            }
+            
+            // 应用层数修饰
+            if (stackModifier > 0)
+            {
+                buff.AddStack(stackModifier);
+            }
             
             // 存储
             buffByInstanceId[buff.InstanceId] = buff;
@@ -324,6 +389,18 @@ namespace BuffSystem.Runtime
                     buffsBySource[source] = sourceList;
                 }
                 sourceList.Add(buff);
+            }
+            
+            // 触发修饰器后回调
+            if (modifiers != null)
+            {
+                foreach (var modifier in modifiers)
+                {
+                    if (modifier.CanModify(buff))
+                    {
+                        modifier.OnAfterApply(buff);
+                    }
+                }
             }
             
             // 触发获得事件

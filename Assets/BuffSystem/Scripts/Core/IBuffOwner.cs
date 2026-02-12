@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BuffSystem.Events;
+using BuffSystem.Modifiers;
 
 namespace BuffSystem.Core
 {
@@ -88,6 +89,11 @@ namespace BuffSystem.Core
         /// 添加Buff
         /// </summary>
         IBuff AddBuff(IBuffData data, object source = null);
+        
+        /// <summary>
+        /// 添加Buff（带修饰器）
+        /// </summary>
+        IBuff AddBuff(IBuffData data, object source, IEnumerable<IBuffModifier> modifiers);
         
         /// <summary>
         /// 移除Buff

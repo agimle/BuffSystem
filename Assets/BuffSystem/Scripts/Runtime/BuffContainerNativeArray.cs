@@ -5,6 +5,7 @@ using Unity.Collections;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
+using BuffSystem.Modifiers;
 
 namespace BuffSystem.Runtime
 {
@@ -89,6 +90,14 @@ namespace BuffSystem.Runtime
         /// </summary>
         public IBuff AddBuff(IBuffData data, object source = null)
         {
+            return AddBuff(data, source, null);
+        }
+        
+        /// <summary>
+        /// 添加Buff（带修饰器）- O(1) amortized
+        /// </summary>
+        public IBuff AddBuff(IBuffData data, object source, IEnumerable<IBuffModifier> modifiers)
+        {
             if (data == null) return null;
 
             // 检查免疫
@@ -122,15 +131,48 @@ namespace BuffSystem.Runtime
                 return null;
             }
 
+            // 计算修饰器效果
+            float durationMultiplier = 1f;
+            int stackModifier = 0;
+            
+            if (modifiers != null)
+            {
+                var modifierList = new List<IBuffModifier>(modifiers);
+                
+                // 按优先级排序
+                modifierList.Sort((a, b) => 
+                {
+                    int priorityA = a is BuffModifier bmA ? bmA.Priority : 0;
+                    int priorityB = b is BuffModifier bmB ? bmB.Priority : 0;
+                    return priorityB.CompareTo(priorityA);
+                });
+                
+                foreach (var modifier in modifierList)
+                {
+                    durationMultiplier *= modifier.DurationMultiplier;
+                    if (modifier.StackMultiplier != 1f)
+                    {
+                        stackModifier += Mathf.RoundToInt(data.AddStackCount * (modifier.StackMultiplier - 1f));
+                    }
+                    modifier.OnBeforeApply(null);
+                }
+            }
+            
+            // 计算最终持续时间
+            float totalDuration = data.Duration * durationMultiplier;
+            
+            // 计算最终层数
+            int finalStack = data.AddStackCount + stackModifier;
+
             // 创建Buff数据
             var buffData = new BuffDataStruct
             {
                 InstanceId = GenerateInstanceId(),
                 DataId = data.Id,
-                CurrentStack = (short)data.AddStackCount,
+                CurrentStack = (short)finalStack,
                 MaxStack = (short)data.MaxStack,
                 Duration = 0f,
-                TotalDuration = data.Duration,
+                TotalDuration = totalDuration,
                 OwnerId = Owner.OwnerId,
                 SourceId = source?.GetHashCode() ?? 0,
                 Flags = BuildFlags(data)
@@ -148,6 +190,15 @@ namespace BuffSystem.Runtime
                 dataIdToIndices[data.Id] = indices;
             }
             indices.Add(index);
+
+            // 触发修饰器后回调
+            if (modifiers != null)
+            {
+                foreach (var modifier in modifiers)
+                {
+                    modifier.OnAfterApply(null);
+                }
+            }
 
             // 触发事件
             BuffEventSystem.TriggerBuffAdded(new BuffDataWrapperNative(this, index));
