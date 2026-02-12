@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using BuffSystem.Advanced.Combo;
 using UnityEngine;
 using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
-using BuffSystem.Combo;
 
 namespace BuffSystem.Runtime
 {
