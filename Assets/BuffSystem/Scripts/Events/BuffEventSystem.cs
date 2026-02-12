@@ -297,6 +297,14 @@ namespace BuffSystem.Events
             ProcessQueue();
         }
         
+        /// <summary>
+        /// 触发Buff过期事件（public API）
+        /// </summary>
+        public static void TriggerBuffExpired(IBuff buff)
+        {
+            TriggerExpired(buff);
+        }
+        
         internal static void TriggerCleared(IBuffOwner owner)
         {
             eventQueue.Enqueue(new EventQueueItem(EventQueueItemType.Cleared, null, owner));
