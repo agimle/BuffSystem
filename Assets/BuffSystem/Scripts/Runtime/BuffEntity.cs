@@ -13,6 +13,11 @@ namespace BuffSystem.Runtime
     /// Buff实体 - 运行时的Buff实例
     /// 使用对象池复用
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public class BuffEntity : IBuff
     {
         private static int globalInstanceId;
@@ -101,6 +106,12 @@ namespace BuffSystem.Runtime
             {
                 startLogic.OnStart();
             }
+
+            // 注册到分层更新器（使用自动频率分配）
+            if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+            {
+                BuffSystemUpdater.RegisterBuffAuto(this);
+            }
         }
         
         /// <summary>
@@ -108,6 +119,12 @@ namespace BuffSystem.Runtime
         /// </summary>
         internal void Cleanup()
         {
+            // 从分层更新器注销
+            if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+            {
+                BuffSystemUpdater.UnregisterBuff(this);
+            }
+            
             // 触发结束事件
             if (logic is IBuffEnd endLogic)
             {

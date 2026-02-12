@@ -7,6 +7,11 @@ namespace BuffSystem.Core
     /// Buff持有者接口 - 解耦MonoBehaviour依赖
     /// 任何需要持有Buff的对象都可以实现此接口
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuffOwner
     {
         /// <summary>
@@ -61,6 +66,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff容器接口 - 管理Buff的添加、移除、查询
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuffContainer
     {
         /// <summary>

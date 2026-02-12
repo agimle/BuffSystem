@@ -12,6 +12,11 @@ namespace BuffSystem.Runtime
     /// Buff持有者组件 - MonoBehaviour适配器
     /// 挂载到需要持有Buff的GameObject上
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     [AddComponentMenu("BuffSystem/Buff Owner")]
     [DisallowMultipleComponent]
     public class BuffOwner : MonoBehaviour, IBuffOwner
@@ -139,7 +144,16 @@ namespace BuffSystem.Runtime
 
             if (!updateInFixedUpdate && buffContainer != null)
             {
-                buffContainer.Update(Time.deltaTime);
+                // 如果启用了分层更新，只处理维持条件检查和移除队列
+                // Buff的更新由FrequencyBasedUpdater管理
+                if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                {
+                    UpdateMaintainConditionsAndRemoval();
+                }
+                else
+                {
+                    buffContainer.Update(Time.deltaTime);
+                }
             }
         }
 
@@ -150,7 +164,37 @@ namespace BuffSystem.Runtime
 
             if (updateInFixedUpdate && buffContainer != null)
             {
-                buffContainer.Update(Time.fixedDeltaTime);
+                // 如果启用了分层更新，只处理维持条件检查和移除队列
+                // Buff的更新由FrequencyBasedUpdater管理
+                if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                {
+                    UpdateMaintainConditionsAndRemoval();
+                }
+                else
+                {
+                    buffContainer.Update(Time.fixedDeltaTime);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 更新维持条件检查和移除队列（用于分层更新模式）
+        /// </summary>
+        private void UpdateMaintainConditionsAndRemoval()
+        {
+            // 对于BuffContainer，调用其内部方法
+            if (buffContainer is BuffContainer container)
+            {
+                container.UpdateMaintainConditionsAndRemoval();
+            }
+            // 对于BuffContainerOptimized和BuffContainerNativeArray，
+            // 它们的Update方法已经包含了维持条件检查和移除队列处理
+            // 所以在分层更新模式下，我们只需要调用Update(0)来触发这些处理
+            else if (buffContainer is BuffContainerOptimized || buffContainer is BuffContainerNativeArray)
+            {
+                // 这些容器在Update中已经处理了移除队列
+                // 在分层更新模式下，它们只处理移除逻辑，不更新Buff时间
+                buffContainer.Update(0f);
             }
         }
 
@@ -188,7 +232,15 @@ namespace BuffSystem.Runtime
 
                 if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
                 {
-                    owner.buffContainer.Update(deltaTime);
+                    // 如果启用了分层更新，只处理维持条件检查和移除队列
+                    if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                    {
+                        owner.buffContainer.UpdateMaintainConditionsAndRemoval();
+                    }
+                    else
+                    {
+                        owner.buffContainer.Update(deltaTime);
+                    }
                 }
             }
         }
@@ -215,7 +267,15 @@ namespace BuffSystem.Runtime
 
                 if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
                 {
-                    owner.buffContainer.Update(deltaTime);
+                    // 如果启用了分层更新，只处理维持条件检查和移除队列
+                    if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                    {
+                        owner.buffContainer.UpdateMaintainConditionsAndRemoval();
+                    }
+                    else
+                    {
+                        owner.buffContainer.Update(deltaTime);
+                    }
                 }
             }
         }

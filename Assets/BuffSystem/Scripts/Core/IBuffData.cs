@@ -1,10 +1,16 @@
 using System.Collections.Generic;
+using BuffSystem.Data;
 
 namespace BuffSystem.Core
 {
     /// <summary>
     /// Buff数据接口 - 配置数据的抽象
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public interface IBuffData
     {
         /// <summary>
@@ -91,6 +97,11 @@ namespace BuffSystem.Core
         /// 创建Buff逻辑实例
         /// </summary>
         IBuffLogic CreateLogic();
+        
+        /// <summary>
+        /// 更新频率 - 用于分层更新优化CPU性能
+        /// </summary>
+        UpdateFrequency UpdateFrequency { get; }
     }
     
     /// <summary>
@@ -107,6 +118,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff叠加模式
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public enum BuffStackMode
     {
         /// <summary>
@@ -128,6 +144,11 @@ namespace BuffSystem.Core
     /// <summary>
     /// Buff移除模式
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     public enum BuffRemoveMode
     {
         /// <summary>

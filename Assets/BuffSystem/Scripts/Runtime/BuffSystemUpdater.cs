@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using BuffSystem.Data;
 
@@ -15,6 +16,11 @@ namespace BuffSystem.Runtime
         [SerializeField] private UpdateMode updateMode = UpdateMode.EveryFrame;
         [SerializeField] private float updateInterval = 0.1f;
 
+        [Header("分层更新设置")]
+        [SerializeField] private bool enableFrequencyBasedUpdate = true;
+        [Tooltip("自动根据Buff类型分配更新频率")]
+        [SerializeField] private bool autoAssignFrequency = true;
+
         [Header("批处理设置")]
         [SerializeField] private bool enableBatchUpdate = false;
         [SerializeField] private int batchCount = 4;
@@ -23,6 +29,7 @@ namespace BuffSystem.Runtime
         private float updateTimer;
         private int currentBatchIndex = 0;
         private static BuffSystemUpdater instance;
+        private FrequencyBasedUpdater frequencyUpdater;
 
         // 线程安全锁
         private static readonly object instanceLock = new();
@@ -31,6 +38,16 @@ namespace BuffSystem.Runtime
         /// 当前更新模式
         /// </summary>
         public static UpdateMode CurrentUpdateMode => instance != null ? instance.updateMode : UpdateMode.Manual;
+
+        /// <summary>
+        /// 是否启用分层更新
+        /// </summary>
+        public static bool EnableFrequencyBasedUpdate => instance != null && instance.enableFrequencyBasedUpdate;
+
+        /// <summary>
+        /// 分层更新器实例
+        /// </summary>
+        public static FrequencyBasedUpdater FrequencyUpdater => instance?.frequencyUpdater;
 
         public static BuffSystemUpdater Instance
         {
@@ -71,6 +88,9 @@ namespace BuffSystem.Runtime
                 instance = this;
                 DontDestroyOnLoad(gameObject);
 
+                // 初始化分层更新器
+                frequencyUpdater = new FrequencyBasedUpdater();
+
                 // 加载配置
                 var config = BuffSystemConfig.Instance;
                 updateMode = config.UpdateMode;
@@ -78,6 +98,8 @@ namespace BuffSystem.Runtime
                 enableBatchUpdate = config.EnableBatchUpdate;
                 batchCount = config.BatchCount;
                 batchThreshold = config.BatchThreshold;
+                enableFrequencyBasedUpdate = config.EnableFrequencyBasedUpdate;
+                autoAssignFrequency = config.AutoAssignFrequency;
             }
         }
 
@@ -86,13 +108,20 @@ namespace BuffSystem.Runtime
             // 手动模式和回合制模式不自动更新
             if (updateMode == UpdateMode.Manual || updateMode == UpdateMode.TurnBased) return;
 
-            if (updateMode == UpdateMode.EveryFrame)
+            float deltaTime = Time.deltaTime;
+
+            if (enableFrequencyBasedUpdate && frequencyUpdater != null)
             {
-                UpdateAllContainers(Time.deltaTime);
+                // 使用分层更新
+                frequencyUpdater.Update(deltaTime);
+            }
+            else if (updateMode == UpdateMode.EveryFrame)
+            {
+                UpdateAllContainers(deltaTime);
             }
             else if (updateMode == UpdateMode.Interval)
             {
-                updateTimer += Time.deltaTime;
+                updateTimer += deltaTime;
                 if (updateTimer >= updateInterval)
                 {
                     UpdateAllContainers(updateTimer);
@@ -107,7 +136,15 @@ namespace BuffSystem.Runtime
         public static void UpdateAll(float deltaTime)
         {
             if (instance == null) return;
-            instance.UpdateAllContainers(deltaTime);
+            
+            if (instance.enableFrequencyBasedUpdate && instance.frequencyUpdater != null)
+            {
+                instance.frequencyUpdater.Update(deltaTime);
+            }
+            else
+            {
+                instance.UpdateAllContainers(deltaTime);
+            }
         }
 
         /// <summary>
@@ -135,6 +172,92 @@ namespace BuffSystem.Runtime
             instance.updateTimer = 0f;
         }
 
+        /// <summary>
+        /// 设置是否启用分层更新
+        /// </summary>
+        public static void SetFrequencyBasedUpdate(bool enable)
+        {
+            if (instance == null) return;
+            instance.enableFrequencyBasedUpdate = enable;
+        }
+
+        /// <summary>
+        /// 注册Buff到分层更新器
+        /// </summary>
+        public static void RegisterBuff(Core.IBuff buff, UpdateFrequency frequency)
+        {
+            if (instance == null || instance.frequencyUpdater == null) return;
+            instance.frequencyUpdater.Register(buff, frequency);
+        }
+
+        /// <summary>
+        /// 自动注册Buff - 根据Buff特性自动分配最佳更新频率
+        /// </summary>
+        /// <param name="buff">要注册的Buff</param>
+        /// <returns>分配的频率</returns>
+        public static UpdateFrequency RegisterBuffAuto(Core.IBuff buff)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return UpdateFrequency.EveryFrame;
+
+            // 如果启用了自动分配，使用自动分配
+            if (instance.autoAssignFrequency)
+            {
+                return instance.frequencyUpdater.RegisterAuto(buff);
+            }
+            else
+            {
+                // 默认使用每帧更新
+                instance.frequencyUpdater.Register(buff, UpdateFrequency.EveryFrame);
+                return UpdateFrequency.EveryFrame;
+            }
+        }
+
+        /// <summary>
+        /// 批量自动注册Buff
+        /// </summary>
+        /// <param name="buffs">Buff列表</param>
+        /// <returns>Buff到频率的映射</returns>
+        public static Dictionary<Core.IBuff, UpdateFrequency> RegisterBuffsAuto(IEnumerable<Core.IBuff> buffs)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return new Dictionary<Core.IBuff, UpdateFrequency>();
+
+            return instance.frequencyUpdater.RegisterBatchAuto(buffs);
+        }
+
+        /// <summary>
+        /// 从分层更新器注销Buff
+        /// </summary>
+        public static void UnregisterBuff(Core.IBuff buff)
+        {
+            if (instance == null || instance.frequencyUpdater == null) return;
+            instance.frequencyUpdater.Unregister(buff);
+        }
+
+        /// <summary>
+        /// 重新计算并更新Buff的频率分配
+        /// </summary>
+        /// <param name="buff">要重新分配的Buff</param>
+        /// <returns>新的频率</returns>
+        public static UpdateFrequency ReassignBuffFrequency(Core.IBuff buff)
+        {
+            if (instance == null || instance.frequencyUpdater == null)
+                return UpdateFrequency.EveryFrame;
+
+            return instance.frequencyUpdater.ReassignFrequency(buff);
+        }
+
+        /// <summary>
+        /// 获取分层更新器的调试信息
+        /// </summary>
+        public static string GetFrequencyDebugInfo()
+        {
+            if (instance == null || instance.frequencyUpdater == null) 
+                return "FrequencyUpdater not initialized";
+            return instance.frequencyUpdater.GetDebugInfo();
+        }
+
         private void UpdateAllContainers(float deltaTime)
         {
             // 检查是否启用批处理更新
@@ -150,6 +273,15 @@ namespace BuffSystem.Runtime
             {
                 // 不分批，全部更新
                 BuffOwner.UpdateAll(deltaTime);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+            {
+                frequencyUpdater?.Clear();
+                instance = null;
             }
         }
     }

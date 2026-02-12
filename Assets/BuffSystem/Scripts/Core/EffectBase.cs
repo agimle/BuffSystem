@@ -6,6 +6,11 @@ namespace BuffSystem.Core
     /// 效果基类 - 所有效果的抽象基类
     /// 支持序列化，可在Inspector中配置
     /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
     [Serializable]
     public abstract class EffectBase : IEffect
     {

@@ -15,11 +15,17 @@ namespace BuffSystem.Data
         [SerializeField] private int batchCount = 4;
         [SerializeField] private float updateInterval = 0.1f;
 
+        [Header("分层更新设置")] [SerializeField] private bool enableFrequencyBasedUpdate = true;
+        [Tooltip("自动根据Buff类型分配更新频率")]
+        [SerializeField] private bool autoAssignFrequency = true;
+
         [Header("批处理设置")] [SerializeField] private bool enableBatchUpdate = false;
         [SerializeField] private int batchThreshold = 100; // 超过此数量启用分批
 
         [Header("预热设置")] [SerializeField] private bool prewarmOnInitialize = true;
         [SerializeField] private int prewarmCount = 32;
+
+        [Header("传播设置")] [SerializeField] private int transmissionMaxPerFrame = 10;
 
         [Header("调试设置")] [SerializeField] private bool enableDebugLog = false;
         [SerializeField] private bool enableGizmos = false;
@@ -72,6 +78,16 @@ namespace BuffSystem.Data
         public int BatchThreshold => batchThreshold;
 
         /// <summary>
+        /// 是否启用分层更新
+        /// </summary>
+        public bool EnableFrequencyBasedUpdate => enableFrequencyBasedUpdate;
+
+        /// <summary>
+        /// 是否自动分配更新频率
+        /// </summary>
+        public bool AutoAssignFrequency => autoAssignFrequency;
+
+        /// <summary>
         /// 初始化时是否预热对象池
         /// </summary>
         public bool PrewarmOnInitialize => prewarmOnInitialize;
@@ -80,6 +96,11 @@ namespace BuffSystem.Data
         /// 预热数量
         /// </summary>
         public int PrewarmCount => prewarmCount;
+
+        /// <summary>
+        /// 每帧最大传播处理数量
+        /// </summary>
+        public int TransmissionMaxPerFrame => transmissionMaxPerFrame;
 
         #endregion
 
