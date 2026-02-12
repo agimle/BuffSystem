@@ -6,7 +6,7 @@ using BuffSystem.Data;
 namespace BuffSystem.Runtime
 {
     /// <summary>
-    /// Buff存档管理器 - 管理所有Buff持有者的存档和加载
+    /// Buff存档管理器 - 支持版本管理
     /// </summary>
     public static class BuffSaveManager
     {
@@ -27,6 +27,8 @@ namespace BuffSystem.Runtime
                     var ownerSaveData = SaveOwner(owner);
                     if (ownerSaveData.Buffs.Count > 0)
                     {
+                        // 设置当前系统版本
+                        ownerSaveData.SystemVersion = BuffSaveData.CurrentVersion;
                         result.Add(ownerSaveData);
                     }
                 }
@@ -34,7 +36,7 @@ namespace BuffSystem.Runtime
 
             if (BuffSystemConfig.Instance.EnableDebugLog)
             {
-                Debug.Log($"[BuffSaveManager] 保存了 {result.Count} 个持有者的Buff数据");
+                Debug.Log($"[BuffSaveManager] 保存了 {result.Count} 个持有者的Buff数据 (版本: {BuffSaveData.CurrentVersion})");
             }
 
             return result;
@@ -100,6 +102,45 @@ namespace BuffSystem.Runtime
         #region Load
 
         /// <summary>
+        /// 加载所有Buff持有者的状态
+        /// </summary>
+        /// <param name="saveDataList">存档数据列表</param>
+        /// <param name="sourceResolver">来源对象解析器</param>
+        public static void LoadAll(List<BuffOwnerSaveData> saveDataList, System.Func<int, object> sourceResolver = null)
+        {
+            int successCount = 0;
+            int failCount = 0;
+
+            foreach (var ownerSaveData in saveDataList)
+            {
+                // 验证存档版本
+                if (!ownerSaveData.Validate())
+                {
+                    failCount++;
+                    continue;
+                }
+
+                // 找到对应的Owner
+                var owner = FindOwnerById(ownerSaveData.OwnerId);
+                if (owner != null)
+                {
+                    LoadOwner(owner, ownerSaveData, sourceResolver);
+                    successCount++;
+                }
+                else
+                {
+                    Debug.LogWarning($"[BuffSaveManager] 未找到ID为 {ownerSaveData.OwnerId} 的Buff持有者");
+                    failCount++;
+                }
+            }
+
+            if (BuffSystemConfig.Instance.EnableDebugLog)
+            {
+                Debug.Log($"[BuffSaveManager] 加载完成: 成功 {successCount}, 失败 {failCount}");
+            }
+        }
+
+        /// <summary>
         /// 加载Buff状态到持有者
         /// </summary>
         /// <param name="owner">Buff持有者</param>
@@ -109,6 +150,13 @@ namespace BuffSystem.Runtime
         {
             if (owner == null || saveData == null)
             {
+                return;
+            }
+
+            // 验证存档版本
+            if (!saveData.Validate())
+            {
+                Debug.LogError($"[BuffSaveManager] 持有者 {owner.OwnerName} 的存档数据验证失败");
                 return;
             }
 
@@ -178,6 +226,23 @@ namespace BuffSystem.Runtime
         #region Utility
 
         /// <summary>
+        /// 根据ID查找Buff持有者
+        /// </summary>
+        /// <param name="ownerId">持有者ID</param>
+        /// <returns>Buff持有者</returns>
+        private static IBuffOwner FindOwnerById(int ownerId)
+        {
+            foreach (var owner in BuffOwner.AllOwners)
+            {
+                if (owner.OwnerId == ownerId)
+                {
+                    return owner;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
         /// 从JSON字符串加载所有持有者数据
         /// </summary>
         /// <param name="json">JSON字符串</param>
@@ -224,6 +289,30 @@ namespace BuffSystem.Runtime
                 return "{}";
             }
         }
+
+        #endregion
+
+        #region Version Info
+
+        /// <summary>
+        /// 获取版本变更日志
+        /// </summary>
+        /// <returns>版本变更日志</returns>
+        public static string GetVersionChangelog()
+        {
+            return @"BuffSystem Save Format Changelog:
+
+v1 (Current):
+- 基础存档格式
+- 支持BuffId、层数、持续时间
+- 支持版本管理和自动迁移
+";
+        }
+
+        /// <summary>
+        /// 获取当前存档格式版本
+        /// </summary>
+        public static int CurrentSaveVersion => BuffSaveData.CurrentVersion;
 
         #endregion
 

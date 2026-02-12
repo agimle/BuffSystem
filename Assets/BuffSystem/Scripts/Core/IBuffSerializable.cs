@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace BuffSystem.Core
 {
@@ -21,10 +22,15 @@ namespace BuffSystem.Core
     }
     
     /// <summary>
-    /// Buff存档数据
+    /// Buff存档数据 - 支持版本管理
     /// </summary>
     public class BuffSaveData
     {
+        /// <summary>
+        /// 存档格式版本
+        /// </summary>
+        public int Version = CurrentVersion;
+        
         /// <summary>
         /// Buff ID
         /// </summary>
@@ -51,11 +57,68 @@ namespace BuffSystem.Core
         public Dictionary<string, string> CustomData;
         
         /// <summary>
+        /// 当前系统版本
+        /// </summary>
+        public const int CurrentVersion = 1;
+        
+        /// <summary>
         /// 构造函数
         /// </summary>
         public BuffSaveData()
         {
             CustomData = new Dictionary<string, string>();
+        }
+        
+        /// <summary>
+        /// 迁移到最新版本
+        /// </summary>
+        public void MigrateToLatest()
+        {
+            while (Version < CurrentVersion)
+            {
+                MigrateFromVersion(Version);
+                Version++;
+            }
+        }
+        
+        /// <summary>
+        /// 从指定版本迁移
+        /// </summary>
+        private void MigrateFromVersion(int fromVersion)
+        {
+            switch (fromVersion)
+            {
+                // 未来版本添加更多case
+                // case 1:
+                //     MigrateV1ToV2();
+                //     break;
+                default:
+                    Debug.LogWarning($"[BuffSaveData] 未知的迁移版本: {fromVersion}");
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// v1 -> v2 迁移示例
+        /// </summary>
+        private void MigrateV1ToV2()
+        {
+            // 字段重命名示例
+            // if (CustomData.TryGetValue("oldFieldName", out var value))
+            // {
+            //     CustomData["newFieldName"] = value;
+            //     CustomData.Remove("oldFieldName");
+            // }
+            
+            // 数据转换示例
+            // if (CustomData.TryGetValue("damageType", out var damageTypeStr))
+            // {
+            //     if (int.TryParse(damageTypeStr, out var oldValue))
+            //     {
+            //         var newValue = ConvertDamageType(oldValue);
+            //         CustomData["damageType"] = newValue.ToString();
+            //     }
+            // }
         }
     }
     
@@ -64,6 +127,11 @@ namespace BuffSystem.Core
     /// </summary>
     public class BuffOwnerSaveData
     {
+        /// <summary>
+        /// 系统版本号
+        /// </summary>
+        public int SystemVersion = BuffSaveData.CurrentVersion;
+        
         /// <summary>
         /// 持有者ID
         /// </summary>
@@ -80,6 +148,27 @@ namespace BuffSystem.Core
         public BuffOwnerSaveData()
         {
             Buffs = new List<BuffSaveData>();
+        }
+        
+        /// <summary>
+        /// 验证并修复存档数据
+        /// </summary>
+        public bool Validate()
+        {
+            // 检查系统版本兼容性
+            if (SystemVersion > BuffSaveData.CurrentVersion)
+            {
+                Debug.LogError($"[BuffSaveData] 存档版本 {SystemVersion} 高于当前系统版本 {BuffSaveData.CurrentVersion}");
+                return false;
+            }
+            
+            // 迁移所有Buff数据
+            foreach (var buff in Buffs)
+            {
+                buff.MigrateToLatest();
+            }
+            
+            return true;
         }
     }
 }
