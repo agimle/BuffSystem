@@ -8,10 +8,15 @@ namespace BuffSystem.Core
     /// <summary>
     /// BuffSystem统一入口管理器
     /// 管理所有子管理器的生命周期和统一访问
-    /// v7.0新增
     /// </summary>
+    /// <remarks>
+    /// 👁️ 预览版API: v7.0新增
+    /// 版本历史: v7.0 新增 - 统一Manager入口
+    /// 修改策略: 基本稳定但可能有小调整
+    /// </remarks>
     [AddComponentMenu("BuffSystem/Buff System Manager")]
     [DefaultExecutionOrder(-200)]
+    [PreviewApi]
     public class BuffSystemManager : MonoBehaviour
     {
         private static BuffSystemManager instance;
