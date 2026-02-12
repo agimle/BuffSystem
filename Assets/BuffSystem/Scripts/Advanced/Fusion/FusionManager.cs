@@ -8,23 +8,16 @@ namespace BuffSystem.Advanced.Fusion
 {
     /// <summary>
     /// 融合管理器 - 管理所有融合配方和执行
+    /// 通过BuffSystemManager.Fusion访问
+    /// v7.0: 单例访问改为通过BuffSystemManager
     /// </summary>
     public class FusionManager : MonoBehaviour
     {
-        private static FusionManager instance;
-        public static FusionManager Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    var go = new GameObject("FusionManager");
-                    instance = go.AddComponent<FusionManager>();
-                    DontDestroyOnLoad(go);
-                }
-                return instance;
-            }
-        }
+        /// <summary>
+        /// 全局实例 - 通过BuffSystemManager.Fusion访问
+        /// </summary>
+        [System.Obsolete("使用 BuffSystemManager.Fusion 替代")]
+        public static FusionManager Instance => BuffSystemManager.Fusion;
         
         // 配方注册表
         private Dictionary<string, FusionRecipe> recipes = new();

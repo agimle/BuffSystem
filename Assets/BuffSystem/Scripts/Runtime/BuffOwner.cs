@@ -6,6 +6,8 @@ using BuffSystem.Core;
 using BuffSystem.Data;
 using BuffSystem.Events;
 
+// v7.0: 推荐使用 BuffSystemManager.Combo 访问 Combo 管理器
+
 namespace BuffSystem.Runtime
 {
     /// <summary>

@@ -7,23 +7,16 @@ namespace BuffSystem.Advanced.Transmission
 {
     /// <summary>
     /// 传播管理器 - 管理所有Buff的传播逻辑
+    /// 通过BuffSystemManager.Transmission访问
+    /// v7.0: 单例访问改为通过BuffSystemManager
     /// </summary>
     public class TransmissionManager : MonoBehaviour
     {
-        private static TransmissionManager instance;
-        public static TransmissionManager Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    var go = new GameObject("TransmissionManager");
-                    instance = go.AddComponent<TransmissionManager>();
-                    DontDestroyOnLoad(go);
-                }
-                return instance;
-            }
-        }
+        /// <summary>
+        /// 全局实例 - 通过BuffSystemManager.Transmission访问
+        /// </summary>
+        [System.Obsolete("使用 BuffSystemManager.Transmission 替代")]
+        public static TransmissionManager Instance => BuffSystemManager.Transmission;
         
         // 待处理的传播请求队列
         private Queue<TransmissionRequest> transmissionQueue = new();

@@ -13,12 +13,11 @@ namespace BuffSystem.Advanced.Combo
 {
     /// <summary>
     /// Buff组合管理器 - 管理所有BuffCombo的注册、检测和执行
-    /// 单例模式，全局唯一
+    /// 通过BuffSystemManager.Combo访问
+    /// v7.0: 单例访问改为通过BuffSystemManager
     /// </summary>
     public class BuffComboManager : MonoBehaviour
     {
-        private static BuffComboManager instance;
-
         // Combo注册表
         private readonly List<BuffComboData> registeredCombos = new();
         private readonly Dictionary<int, List<BuffComboData>> combosByBuffId = new();
@@ -30,48 +29,22 @@ namespace BuffSystem.Advanced.Combo
         // 事件监听标记
         private bool isListeningEvents;
 
-        #region Singleton
+        #region Singleton (via BuffSystemManager)
 
         /// <summary>
-        /// 全局实例
+        /// 全局实例 - 通过BuffSystemManager.Combo访问
         /// </summary>
-        public static BuffComboManager Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = FindFirstObjectByType<BuffComboManager>();
-                    if (instance == null)
-                    {
-                        var go = new GameObject("BuffComboManager");
-                        instance = go.AddComponent<BuffComboManager>();
-                        DontDestroyOnLoad(go);
-                    }
-                }
-                return instance;
-            }
-        }
+        [System.Obsolete("使用 BuffSystemManager.Combo 替代")]
+        public static BuffComboManager Instance => BuffSystemManager.Combo;
 
         private void Awake()
         {
-            if (instance != null && instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            instance = this;
-            DontDestroyOnLoad(gameObject);
+            // 由BuffSystemManager管理生命周期
         }
 
         private void OnDestroy()
         {
-            if (instance == this)
-            {
-                UnsubscribeEvents();
-                instance = null;
-            }
+            UnsubscribeEvents();
         }
 
         #endregion
