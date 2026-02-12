@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BuffSystem.Events;
 
 namespace BuffSystem.Core
 {
@@ -22,6 +23,11 @@ namespace BuffSystem.Core
         /// 获取Buff容器
         /// </summary>
         IBuffContainer BuffContainer { get; }
+        
+        /// <summary>
+        /// 本地事件系统
+        /// </summary>
+        BuffLocalEventSystem LocalEvents { get; }
         
         /// <summary>
         /// 当Buff事件发生时调用

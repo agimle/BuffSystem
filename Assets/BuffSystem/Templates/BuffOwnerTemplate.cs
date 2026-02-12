@@ -41,7 +41,9 @@ namespace MyNamespace
         /// Buff 容器
         /// </summary>
         public IBuffContainer BuffContainer => buffOwner?.BuffContainer;
-        
+
+        public BuffLocalEventSystem LocalEvents { get; }
+
         /// <summary>
         /// Buff 事件回调
         /// </summary>

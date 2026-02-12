@@ -139,7 +139,11 @@ namespace BuffSystem.Runtime
                     stackChangeLogic.OnStackChanged(oldStack, currentStack);
                 }
                 
+                // 触发全局事件
                 BuffEventSystem.TriggerStackChanged(this, oldStack, currentStack);
+                
+                // 触发持有者本地事件
+                owner?.LocalEvents?.TriggerStackChanged(this, oldStack, currentStack);
             }
         }
         
@@ -167,7 +171,11 @@ namespace BuffSystem.Runtime
                     stackChangeLogic.OnStackChanged(oldStack, currentStack);
                 }
                 
+                // 触发全局事件
                 BuffEventSystem.TriggerStackChanged(this, oldStack, currentStack);
+                
+                // 触发持有者本地事件
+                owner?.LocalEvents?.TriggerStackChanged(this, oldStack, currentStack);
             }
             
             // 层数为0时标记移除
@@ -200,7 +208,11 @@ namespace BuffSystem.Runtime
                 durationChangeLogic.OnDurationChanged(oldDuration, duration);
             }
             
+            // 触发全局事件
             BuffEventSystem.TriggerRefreshed(this);
+            
+            // 触发持有者本地事件
+            owner?.LocalEvents?.TriggerRefreshed(this);
         }
         
         /// <summary>
@@ -277,6 +289,20 @@ namespace BuffSystem.Runtime
         private bool CanRefresh => data?.CanRefresh ?? false;
 
         public int SourceId => sourceId;
+
+        /// <summary>
+        /// 设置持续时间（用于网络同步和存档恢复）
+        /// </summary>
+        /// <param name="newDuration">新的持续时间值</param>
+        internal void SetDuration(float newDuration)
+        {
+            duration = Mathf.Max(0, newDuration);
+            
+            if (BuffSystemConfig.Instance.EnableDebugLog)
+            {
+                Debug.Log($"[BuffEntity] {Name} 持续时间设置为 {duration:F1}s");
+            }
+        }
 
         /// <summary>
         /// 从存档数据恢复Buff状态

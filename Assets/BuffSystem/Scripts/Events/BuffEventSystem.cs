@@ -165,21 +165,104 @@ namespace BuffSystem.Events
         #endregion
         
         #region Event Queue
-        
+
         private static readonly Queue<EventQueueItem> eventQueue = new();
         private static bool isProcessingQueue = false;
         private static int maxEventsPerFrame = 1000; // 防止无限循环保护
-        
+
         /// <summary>
         /// 当前队列中的事件数量
         /// </summary>
         public static int PendingEventCount => eventQueue.Count;
-        
+
         /// <summary>
         /// 是否正在处理队列
         /// </summary>
         public static bool IsProcessingQueue => isProcessingQueue;
-        
+
+        #endregion
+
+        #region Generic Event System (For TriggerEventEffect)
+
+        // 通用事件回调存储
+        private static readonly Dictionary<string, Delegate> genericEventHandlers = new();
+
+        /// <summary>
+        /// 订阅通用事件
+        /// </summary>
+        /// <typeparam name="T">事件数据类型</typeparam>
+        /// <param name="eventName">事件名称</param>
+        /// <param name="callback">回调函数</param>
+        public static void On<T>(string eventName, Action<T> callback)
+        {
+            if (string.IsNullOrEmpty(eventName)) return;
+            if (callback == null) return;
+
+            if (!genericEventHandlers.TryGetValue(eventName, out var handlers))
+            {
+                handlers = null;
+            }
+
+            genericEventHandlers[eventName] = (handlers as Action<T>) + callback;
+        }
+
+        /// <summary>
+        /// 取消订阅通用事件
+        /// </summary>
+        /// <typeparam name="T">事件数据类型</typeparam>
+        /// <param name="eventName">事件名称</param>
+        /// <param name="callback">回调函数</param>
+        public static void Off<T>(string eventName, Action<T> callback)
+        {
+            if (string.IsNullOrEmpty(eventName)) return;
+            if (callback == null) return;
+
+            if (genericEventHandlers.TryGetValue(eventName, out var handlers))
+            {
+                var updatedHandlers = (handlers as Action<T>) - callback;
+                if (updatedHandlers == null)
+                {
+                    genericEventHandlers.Remove(eventName);
+                }
+                else
+                {
+                    genericEventHandlers[eventName] = updatedHandlers;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 触发通用事件
+        /// </summary>
+        /// <typeparam name="T">事件数据类型</typeparam>
+        /// <param name="eventName">事件名称</param>
+        /// <param name="data">事件数据</param>
+        public static void Trigger<T>(string eventName, T data)
+        {
+            if (string.IsNullOrEmpty(eventName)) return;
+
+            if (genericEventHandlers.TryGetValue(eventName, out var handlers))
+            {
+                (handlers as Action<T>)?.Invoke(data);
+            }
+        }
+
+        /// <summary>
+        /// 清除所有通用事件订阅
+        /// </summary>
+        public static void ClearGenericEvents()
+        {
+            genericEventHandlers.Clear();
+        }
+
+        /// <summary>
+        /// 获取已注册的通用事件名称列表
+        /// </summary>
+        public static IReadOnlyCollection<string> GetRegisteredEventNames()
+        {
+            return genericEventHandlers.Keys;
+        }
+
         #endregion
         
         #region Trigger Methods (Enqueue)
