@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using BuffSystem.Data;
 
 namespace BuffSystem.Core
 {
@@ -96,6 +97,11 @@ namespace BuffSystem.Core
         /// 创建Buff逻辑实例
         /// </summary>
         IBuffLogic CreateLogic();
+        
+        /// <summary>
+        /// 更新频率 - 用于分层更新优化CPU性能
+        /// </summary>
+        UpdateFrequency UpdateFrequency { get; }
     }
     
     /// <summary>

@@ -498,7 +498,46 @@ namespace BuffSystem.Runtime
         /// </summary>
         public void Update(float deltaTime)
         {
-            // 更新所有Buff
+            // 如果启用了分层更新，Buff的更新由FrequencyBasedUpdater管理
+            // 这里只处理维持条件检查和移除队列
+            if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+            {
+                UpdateMaintainConditionsAndRemoval();
+            }
+            else
+            {
+                // 传统更新模式：更新所有Buff
+                foreach (var buff in buffByInstanceId.Values)
+                {
+                    // 检查维持条件
+                    if (buff.Data is BuffDataSO buffDataSO && !buffDataSO.MaintainConditions.CheckAllConditions(Owner, buff.Data))
+                    {
+                        buff.MarkForRemoval();
+                        if (!removalQueue.Contains(buff.InstanceId))
+                        {
+                            removalQueue.Enqueue(buff.InstanceId);
+                        }
+                        continue;
+                    }
+                    
+                    buff.Update(deltaTime);
+                    
+                    if (buff.IsMarkedForRemoval && !removalQueue.Contains(buff.InstanceId))
+                    {
+                        removalQueue.Enqueue(buff.InstanceId);
+                    }
+                }
+            }
+            
+            // 处理移除队列
+            ProcessRemovalQueue();
+        }
+        
+        /// <summary>
+        /// 更新维持条件检查和移除队列（用于分层更新模式）
+        /// </summary>
+        internal void UpdateMaintainConditionsAndRemoval()
+        {
             foreach (var buff in buffByInstanceId.Values)
             {
                 // 检查维持条件
@@ -509,12 +548,9 @@ namespace BuffSystem.Runtime
                     {
                         removalQueue.Enqueue(buff.InstanceId);
                     }
-                    continue;
                 }
-                
-                buff.Update(deltaTime);
-                
-                if (buff.IsMarkedForRemoval && !removalQueue.Contains(buff.InstanceId))
+                // 检查是否已被标记为移除
+                else if (buff.IsMarkedForRemoval && !removalQueue.Contains(buff.InstanceId))
                 {
                     removalQueue.Enqueue(buff.InstanceId);
                 }

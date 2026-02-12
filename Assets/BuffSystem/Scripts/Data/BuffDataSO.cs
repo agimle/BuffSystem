@@ -51,6 +51,10 @@ namespace BuffSystem.Data
         [Header("标签")]
         [SerializeField] private List<string> tags = new();
         
+        [Header("性能设置")]
+        [Tooltip("更新频率 - 用于分层更新优化CPU性能")]
+        [SerializeField] private UpdateFrequency updateFrequency = UpdateFrequency.Every33ms;
+        
         [Header("逻辑脚本")]
         #if UNITY_EDITOR
         [SerializeField] private MonoScript buffLogicScript;
@@ -109,6 +113,11 @@ namespace BuffSystem.Data
         /// 是否拥有指定标签
         /// </summary>
         public bool HasTag(string tag) => tags.Contains(tag);
+        
+        /// <summary>
+        /// 更新频率 - 用于分层更新优化CPU性能
+        /// </summary>
+        public UpdateFrequency UpdateFrequency => updateFrequency;
         
         /// <summary>
         /// 创建Buff逻辑实例（深拷贝）

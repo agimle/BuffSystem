@@ -106,6 +106,12 @@ namespace BuffSystem.Runtime
             {
                 startLogic.OnStart();
             }
+            
+            // 注册到分层更新器
+            if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+            {
+                BuffSystemUpdater.RegisterBuff(this, data.UpdateFrequency);
+            }
         }
         
         /// <summary>
@@ -113,6 +119,12 @@ namespace BuffSystem.Runtime
         /// </summary>
         internal void Cleanup()
         {
+            // 从分层更新器注销
+            if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+            {
+                BuffSystemUpdater.UnregisterBuff(this);
+            }
+            
             // 触发结束事件
             if (logic is IBuffEnd endLogic)
             {

@@ -144,7 +144,16 @@ namespace BuffSystem.Runtime
 
             if (!updateInFixedUpdate && buffContainer != null)
             {
-                buffContainer.Update(Time.deltaTime);
+                // 如果启用了分层更新，只处理维持条件检查和移除队列
+                // Buff的更新由FrequencyBasedUpdater管理
+                if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                {
+                    buffContainer.UpdateMaintainConditionsAndRemoval();
+                }
+                else
+                {
+                    buffContainer.Update(Time.deltaTime);
+                }
             }
         }
 
@@ -155,7 +164,16 @@ namespace BuffSystem.Runtime
 
             if (updateInFixedUpdate && buffContainer != null)
             {
-                buffContainer.Update(Time.fixedDeltaTime);
+                // 如果启用了分层更新，只处理维持条件检查和移除队列
+                // Buff的更新由FrequencyBasedUpdater管理
+                if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                {
+                    buffContainer.UpdateMaintainConditionsAndRemoval();
+                }
+                else
+                {
+                    buffContainer.Update(Time.fixedDeltaTime);
+                }
             }
         }
 
@@ -193,7 +211,15 @@ namespace BuffSystem.Runtime
 
                 if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
                 {
-                    owner.buffContainer.Update(deltaTime);
+                    // 如果启用了分层更新，只处理维持条件检查和移除队列
+                    if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                    {
+                        owner.buffContainer.UpdateMaintainConditionsAndRemoval();
+                    }
+                    else
+                    {
+                        owner.buffContainer.Update(deltaTime);
+                    }
                 }
             }
         }
@@ -220,7 +246,15 @@ namespace BuffSystem.Runtime
 
                 if (owner.gameObject.activeInHierarchy && owner.buffContainer != null)
                 {
-                    owner.buffContainer.Update(deltaTime);
+                    // 如果启用了分层更新，只处理维持条件检查和移除队列
+                    if (BuffSystemUpdater.EnableFrequencyBasedUpdate)
+                    {
+                        owner.buffContainer.UpdateMaintainConditionsAndRemoval();
+                    }
+                    else
+                    {
+                        owner.buffContainer.Update(deltaTime);
+                    }
                 }
             }
         }
