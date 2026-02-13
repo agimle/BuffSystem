@@ -6,67 +6,6 @@ using BuffSystem.Modifiers;
 namespace BuffSystem.Core
 {
     /// <summary>
-    /// Buff持有者接口 - 解耦MonoBehaviour依赖
-    /// 任何需要持有Buff的对象都可以实现此接口
-    /// </summary>
-    /// <remarks>
-    /// 🔒 稳定API: v6.0后保证向后兼容
-    /// 版本历史: v1.0-v6.0 逐步完善
-    /// 修改策略: 只允许bug修复，不允许破坏性变更
-    /// </remarks>
-    [StableApi("6.0", VersionHistory = "v1.0-v6.0 逐步完善")]
-    public interface IBuffOwner
-    {
-        /// <summary>
-        /// 持有者唯一标识
-        /// </summary>
-        int OwnerId { get; }
-
-        /// <summary>
-        /// 持有者名称（用于调试）
-        /// </summary>
-        string OwnerName { get; }
-
-        /// <summary>
-        /// 获取Buff容器
-        /// </summary>
-        IBuffContainer BuffContainer { get; }
-        
-        /// <summary>
-        /// 本地事件系统
-        /// </summary>
-        BuffLocalEventSystem LocalEvents { get; }
-        
-        /// <summary>
-        /// 当Buff事件发生时调用
-        /// </summary>
-        void OnBuffEvent(BuffEventType eventType, IBuff buff);
-        
-        #region Immunity System (v4.0)
-        
-        /// <summary>
-        /// 检查是否对指定Buff免疫
-        /// </summary>
-        /// <param name="buffId">Buff ID</param>
-        /// <returns>是否免疫</returns>
-        bool IsImmuneTo(int buffId);
-        
-        /// <summary>
-        /// 检查是否对指定标签免疫
-        /// </summary>
-        /// <param name="tag">标签</param>
-        /// <returns>是否免疫</returns>
-        bool IsImmuneToTag(string tag);
-        
-        /// <summary>
-        /// 获取免疫标签列表
-        /// </summary>
-        IReadOnlyList<string> ImmuneTags { get; }
-        
-        #endregion
-    }
-    
-    /// <summary>
     /// Buff容器接口 - 管理Buff的添加、移除、查询
     /// </summary>
     /// <remarks>
@@ -187,6 +126,67 @@ namespace BuffSystem.Core
         /// 清空所有组
         /// </summary>
         void ClearAllGroups();
+        
+        #endregion
+    }
+    
+    /// <summary>
+    /// Buff持有者接口 - 解耦MonoBehaviour依赖
+    /// 任何需要持有Buff的对象都可以实现此接口
+    /// </summary>
+    /// <remarks>
+    /// 🔒 稳定API: v6.0后保证向后兼容
+    /// 版本历史: v1.0-v6.0 逐步完善
+    /// 修改策略: 只允许bug修复，不允许破坏性变更
+    /// </remarks>
+    [StableApi("6.0", VersionHistory = "v1.0-v6.0 逐步完善")]
+    public interface IBuffOwner
+    {
+        /// <summary>
+        /// 持有者唯一标识
+        /// </summary>
+        int OwnerId { get; }
+
+        /// <summary>
+        /// 持有者名称（用于调试）
+        /// </summary>
+        string OwnerName { get; }
+
+        /// <summary>
+        /// 获取Buff容器
+        /// </summary>
+        IBuffContainer BuffContainer { get; }
+        
+        /// <summary>
+        /// 本地事件系统
+        /// </summary>
+        BuffLocalEventSystem LocalEvents { get; }
+        
+        /// <summary>
+        /// 当Buff事件发生时调用
+        /// </summary>
+        void OnBuffEvent(BuffEventType eventType, IBuff buff);
+        
+        #region Immunity System (v4.0)
+        
+        /// <summary>
+        /// 检查是否对指定Buff免疫
+        /// </summary>
+        /// <param name="buffId">Buff ID</param>
+        /// <returns>是否免疫</returns>
+        bool IsImmuneTo(int buffId);
+        
+        /// <summary>
+        /// 检查是否对指定标签免疫
+        /// </summary>
+        /// <param name="tag">标签</param>
+        /// <returns>是否免疫</returns>
+        bool IsImmuneToTag(string tag);
+        
+        /// <summary>
+        /// 获取免疫标签列表
+        /// </summary>
+        IReadOnlyList<string> ImmuneTags { get; }
         
         #endregion
     }
