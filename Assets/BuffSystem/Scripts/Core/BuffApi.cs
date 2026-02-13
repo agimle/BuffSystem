@@ -444,7 +444,7 @@ namespace BuffSystem.Core
         #endregion
 
         #region Data Query
-        
+
         /// <summary>
         /// 获取Buff数据（通过ID）
         /// </summary>
@@ -453,7 +453,7 @@ namespace BuffSystem.Core
             EnsureInitialized();
             return BuffDatabase.Instance.GetBuffData(buffId);
         }
-        
+
         /// <summary>
         /// 获取Buff数据（通过名称）
         /// </summary>
@@ -464,6 +464,17 @@ namespace BuffSystem.Core
         }
 
         /// <summary>
+        /// 获取Buff数据（通过BuffId）
+        /// </summary>
+        /// <param name="buffId">BuffId（支持int或string）</param>
+        /// <returns>Buff数据</returns>
+        public static IBuffData GetBuffData(BuffId buffId)
+        {
+            EnsureInitialized();
+            return buffId.GetBuffData();
+        }
+
+        /// <summary>
         /// 是否存在Buff数据
         /// </summary>
         public static bool HasBuffData(int buffId)
@@ -471,7 +482,7 @@ namespace BuffSystem.Core
             EnsureInitialized();
             return BuffDatabase.Instance.ContainsBuff(buffId);
         }
-        
+
         /// <summary>
         /// 是否存在Buff数据
         /// </summary>
@@ -480,7 +491,18 @@ namespace BuffSystem.Core
             EnsureInitialized();
             return BuffDatabase.Instance.ContainsBuff(buffName);
         }
-        
+
+        /// <summary>
+        /// 是否存在Buff数据（通过BuffId）
+        /// </summary>
+        /// <param name="buffId">BuffId（支持int或string）</param>
+        /// <returns>是否存在</returns>
+        public static bool HasBuffData(BuffId buffId)
+        {
+            EnsureInitialized();
+            return buffId.GetBuffData() != null;
+        }
+
         /// <summary>
         /// 获取所有Buff数据
         /// </summary>
@@ -489,7 +511,7 @@ namespace BuffSystem.Core
             EnsureInitialized();
             return BuffDatabase.Instance.GetAllBuffData();
         }
-        
+
         #endregion
         
         #region Utility
