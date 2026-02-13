@@ -301,7 +301,7 @@ namespace BuffSystem.Runtime
         /// <summary>
         /// 获取所有活跃持有者的数量
         /// </summary>
-        internal static int ActiveOwnerCount => allOwners.Count;
+        public static int ActiveOwnerCount => allOwners.Count;
 
         /// <summary>
         /// 获取所有Buff持有者（只读）
