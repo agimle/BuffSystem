@@ -18,7 +18,8 @@ namespace BuffSystem.Runtime
         /// <returns>所有持有者的存档数据列表</returns>
         public static List<BuffOwnerSaveData> SaveAll()
         {
-            var result = new List<BuffOwnerSaveData>();
+            // 预分配容量避免动态扩容
+            var result = new List<BuffOwnerSaveData>(BuffOwner.AllOwners.Count);
 
             foreach (var owner in BuffOwner.AllOwners)
             {

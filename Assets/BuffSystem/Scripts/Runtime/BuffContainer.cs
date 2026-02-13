@@ -394,8 +394,8 @@ namespace BuffSystem.Runtime
         /// </summary>
         private void HandleDependencyRemoval(int removedBuffId)
         {
-            // 收集需要移除的Buff
-            var buffsToRemove = new List<BuffEntity>();
+            // 收集需要移除的Buff - 预分配容量避免动态扩容
+            var buffsToRemove = new List<BuffEntity>(buffByInstanceId.Count);
             
             foreach (var buff in buffByInstanceId.Values)
             {

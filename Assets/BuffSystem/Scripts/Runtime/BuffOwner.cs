@@ -557,7 +557,8 @@ namespace BuffSystem.Runtime
         {
             if (buffContainer == null) return;
             
-            var buffsToRemove = new List<IBuff>();
+            // 预分配容量避免动态扩容
+            var buffsToRemove = new List<IBuff>(buffContainer.Count);
             foreach (var buff in buffContainer.AllBuffs)
             {
                 if (buff.Data.Tags.Contains(tag))
