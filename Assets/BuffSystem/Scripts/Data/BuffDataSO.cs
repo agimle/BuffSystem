@@ -253,6 +253,149 @@ namespace BuffSystem.Data
 
         #endregion
 
+        #region 模板系统支持
+
+#if UNITY_EDITOR
+
+        [Header("模板继承")]
+        [Tooltip("基础模板")]
+        [SerializeField] private BuffTemplate baseTemplate;
+
+        [Tooltip("是否继承模板值")]
+        [SerializeField] private bool inheritFromTemplate = true;
+
+        /// <summary>
+        /// 基础模板
+        /// </summary>
+        public BuffTemplate BaseTemplate => baseTemplate;
+
+        /// <summary>
+        /// 是否继承模板
+        /// </summary>
+        public bool InheritFromTemplate => inheritFromTemplate;
+
+        /// <summary>
+        /// 应用模板（如果配置了模板且允许继承）
+        /// </summary>
+        public void ApplyTemplate()
+        {
+            if (baseTemplate != null && inheritFromTemplate)
+            {
+                baseTemplate.ApplyTemplate(this, false);
+            }
+        }
+
+#endif
+
+        #endregion
+
+        #region 编辑器方法（模板系统使用）
+
+#if UNITY_EDITOR
+
+        /// <summary>
+        /// 设置ID（模板系统使用）
+        /// </summary>
+        public void SetId(int value) => id = value;
+
+        /// <summary>
+        /// 设置名称（模板系统使用）
+        /// </summary>
+        public void SetName(string value) => buffName = value;
+
+        /// <summary>
+        /// 设置效果类型（模板系统使用）
+        /// </summary>
+        public void SetEffectType(BuffEffectType value) => effectType = value;
+
+        /// <summary>
+        /// 设置是否唯一（模板系统使用）
+        /// </summary>
+        public void SetIsUnique(bool value) => isUnique = value;
+
+        /// <summary>
+        /// 设置叠加模式（模板系统使用）
+        /// </summary>
+        public void SetStackMode(BuffStackMode value) => stackMode = value;
+
+        /// <summary>
+        /// 设置最大层数（模板系统使用）
+        /// </summary>
+        public void SetMaxStack(int value) => maxStack = Mathf.Max(1, value);
+
+        /// <summary>
+        /// 设置添加层数（模板系统使用）
+        /// </summary>
+        public void SetAddStackCount(int value) => addStackCount = Mathf.Max(1, value);
+
+        /// <summary>
+        /// 设置是否永久（模板系统使用）
+        /// </summary>
+        public void SetIsPermanent(bool value) => isPermanent = value;
+
+        /// <summary>
+        /// 设置持续时间（模板系统使用）
+        /// </summary>
+        public void SetDuration(float value) => duration = Mathf.Max(0.1f, value);
+
+        /// <summary>
+        /// 设置是否可刷新（模板系统使用）
+        /// </summary>
+        public void SetCanRefresh(bool value) => canRefresh = value;
+
+        /// <summary>
+        /// 设置移除模式（模板系统使用）
+        /// </summary>
+        public void SetRemoveMode(BuffRemoveMode value) => removeMode = value;
+
+        /// <summary>
+        /// 设置移除层数（模板系统使用）
+        /// </summary>
+        public void SetRemoveStackCount(int value) => removeStackCount = Mathf.Max(1, value);
+
+        /// <summary>
+        /// 设置移除间隔（模板系统使用）
+        /// </summary>
+        public void SetRemoveInterval(float value) => removeInterval = Mathf.Max(0f, value);
+
+        /// <summary>
+        /// 设置互斥优先级（模板系统使用）
+        /// </summary>
+        public void SetMutexPriority(MutexPriority value) => mutexPriority = value;
+
+        /// <summary>
+        /// 添加组配置（模板系统使用）
+        /// </summary>
+        public void AddGroupConfig(BuffGroupConfigEntry config)
+        {
+            if (config != null && !string.IsNullOrEmpty(config.groupId))
+            {
+                groupConfigs.Add(config);
+            }
+        }
+
+        /// <summary>
+        /// 添加标签（模板系统使用）
+        /// </summary>
+        public void AddTag(BuffTag tag)
+        {
+            if (!tags.Contains(tag))
+            {
+                tags.Add(tag);
+            }
+        }
+
+        /// <summary>
+        /// 设置更新频率（模板系统使用）
+        /// </summary>
+        public void SetUpdateFrequency(UpdateFrequency value) => updateFrequency = value;
+
+#endif
+
+        #endregion
+
+        #region 编辑器方法
+
 #if UNITY_EDITOR
 
         private void OnValidate()
@@ -270,8 +413,16 @@ namespace BuffSystem.Data
             removeStackCount = Mathf.Max(1, removeStackCount);
             duration = Mathf.Max(0.1f, duration);
             removeInterval = Mathf.Max(0f, removeInterval);
+
+            // 应用模板（仅在编辑器中且配置了模板时）
+            if (baseTemplate != null && inheritFromTemplate)
+            {
+                ApplyTemplate();
+            }
         }
 
 #endif
+
+        #endregion
     }
 }
