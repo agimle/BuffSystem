@@ -49,8 +49,8 @@ namespace BuffSystem.Data
         [SerializeField] private MutexPriority mutexPriority = MutexPriority.ReplaceOthers;
         
         [Header("标签")]
-        [SerializeField] private List<string> tags = new();
-        
+        [SerializeField] private List<BuffTag> tags = new();
+
         [Header("性能设置")]
         [Tooltip("更新频率 - 用于分层更新优化CPU性能")]
         [SerializeField] private UpdateFrequency updateFrequency = UpdateFrequency.Every33ms;
@@ -105,14 +105,63 @@ namespace BuffSystem.Data
         public MutexPriority MutexPriority => mutexPriority;
         
         /// <summary>
-        /// 标签列表
+        /// 标签列表（返回BuffTag列表）
         /// </summary>
-        public IReadOnlyList<string> Tags => tags;
-        
+        public IReadOnlyList<BuffTag> BuffTags => tags;
+
         /// <summary>
-        /// 是否拥有指定标签
+        /// 标签列表（字符串形式，兼容旧接口）
         /// </summary>
-        public bool HasTag(string tag) => tags.Contains(tag);
+        public IReadOnlyList<string> Tags
+        {
+            get
+            {
+                // 实时转换，避免缓存不一致问题
+                if (tags.Count == 0)
+                    return System.Array.Empty<string>();
+
+                var result = new List<string>(tags.Count);
+                foreach (var tag in tags)
+                {
+                    result.Add(tag.TagName);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 是否拥有指定标签（使用哈希优化）
+        /// </summary>
+        public bool HasTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag) || tags.Count == 0)
+                return false;
+
+            int hash = BuffTagManager.GetTagHash(tag);
+            foreach (var buffTag in tags)
+            {
+                if (buffTag.TagHash == hash)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 是否拥有指定标签（BuffTag版本）
+        /// </summary>
+        public bool HasTag(BuffTag tag)
+        {
+            if (tags.Count == 0)
+                return false;
+
+            int hash = tag.TagHash;
+            foreach (var buffTag in tags)
+            {
+                if (buffTag.TagHash == hash)
+                    return true;
+            }
+            return false;
+        }
         
         /// <summary>
         /// 更新频率 - 用于分层更新优化CPU性能
