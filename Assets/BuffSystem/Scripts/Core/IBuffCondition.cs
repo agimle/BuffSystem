@@ -1,6 +1,7 @@
 using System;
 using BuffSystem.Data;
 using BuffSystem.Utils;
+using UnityEngine;
 
 namespace BuffSystem.Core
 {
@@ -139,23 +140,102 @@ namespace BuffSystem.Core
 
     #endregion
 
-    #region 属性持有者接口
+    #region 增强条件类型
 
     /// <summary>
-    /// 属性持有者接口
-    /// 用于条件系统获取属性值
+    /// 概率条件
+    /// 基于随机数检查
     /// </summary>
-    public interface IAttributeOwner
+    [Serializable]
+    public class ChanceCondition : IBuffCondition
     {
-        /// <summary>
-        /// 获取属性值
-        /// </summary>
-        float GetAttributeValue(string attributeName);
+        [SerializeField]
+        [Range(0f, 1f)]
+        private float chance = 0.5f;
 
-        /// <summary>
-        /// 获取生命值百分比（0-1）
-        /// </summary>
-        float GetHealthPercent();
+        [SerializeField]
+        private bool useSeed = false;
+
+        [SerializeField]
+        private int seed = 0;
+
+        public bool Check(IBuffOwner owner, IBuffData data)
+        {
+            if (useSeed)
+            {
+                // 使用固定种子（可预测的结果）
+                var random = new System.Random(seed);
+                return random.NextDouble() < chance;
+            }
+            else
+            {
+                // 使用Unity随机
+                return UnityEngine.Random.value < chance;
+            }
+        }
+
+        public string Description => $"概率{chance:P0}";
+    }
+
+    /// <summary>
+    /// Buff层数条件
+    /// 检查指定Buff的层数
+    /// </summary>
+    [Serializable]
+    public class BuffStackCondition : IBuffCondition
+    {
+        [SerializeField] private int buffId;
+
+        [SerializeField]
+        private CompareType compareType = CompareType.GreaterOrEqual;
+
+        [SerializeField] private int targetStack = 1;
+
+        public enum CompareType
+        {
+            GreaterThan,
+            GreaterOrEqual,
+            Equal,
+            LessOrEqual,
+            LessThan
+        }
+
+        public bool Check(IBuffOwner owner, IBuffData data)
+        {
+            if (owner?.BuffContainer == null) return false;
+
+            var buff = owner.BuffContainer.GetBuff(buffId);
+            if (buff == null) return false;
+
+            int currentStack = buff.CurrentStack;
+
+            return compareType switch
+            {
+                CompareType.GreaterThan => currentStack > targetStack,
+                CompareType.GreaterOrEqual => currentStack >= targetStack,
+                CompareType.Equal => currentStack == targetStack,
+                CompareType.LessOrEqual => currentStack <= targetStack,
+                CompareType.LessThan => currentStack < targetStack,
+                _ => false
+            };
+        }
+
+        public string Description
+        {
+            get
+            {
+                string op = compareType switch
+                {
+                    CompareType.GreaterThan => ">",
+                    CompareType.GreaterOrEqual => ">=",
+                    CompareType.Equal => "=",
+                    CompareType.LessOrEqual => "<=",
+                    CompareType.LessThan => "<",
+                    _ => "?"
+                };
+                return $"Buff[{buffId}]层数{op}{targetStack}";
+            }
+        }
     }
 
     #endregion
