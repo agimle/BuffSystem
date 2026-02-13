@@ -159,7 +159,16 @@ namespace BuffSystem.Runtime
                     return null;
                 }
             }
-            
+
+            // 处理组策略
+            if (data is BuffDataSO dataSO3 && dataSO3.GroupConfigs.Count > 0)
+            {
+                if (!HandleGroupPolicy(dataSO3, source))
+                {
+                    return null;
+                }
+            }
+
             // 处理唯一性
             if (data.IsUnique)
             {
@@ -170,9 +179,17 @@ namespace BuffSystem.Runtime
                     return HandleExistingBuff(existingBuff, data, source);
                 }
             }
-            
+
             // 创建新Buff
-            return CreateNewBuff(data, source);
+            var newBuff = CreateNewBuff(data, source);
+
+            // 将新Buff添加到配置的组中
+            if (newBuff is BuffEntity buffEntity && data is BuffDataSO dataSO4)
+            {
+                AddBuffToGroups(buffEntity, dataSO4);
+            }
+
+            return newBuff;
         }
         
         /// <summary>
@@ -265,7 +282,7 @@ namespace BuffSystem.Runtime
                                 Debug.Log($"[BuffContainer] 添加Buff {data.Id} 被阻止，与Buff {mutexId} 互斥");
                             }
                             return null;
-                            
+
                         case MutexPriority.ReplaceOthers:
                             // 移除互斥Buff
                             for (int i = mutexBuffs.Count - 1; i >= 0; i--)
@@ -273,7 +290,7 @@ namespace BuffSystem.Runtime
                                 RemoveBuff(mutexBuffs[i]);
                             }
                             break;
-                            
+
                         case MutexPriority.Coexist:
                             // 仅标记，不做处理
                             break;
@@ -282,14 +299,103 @@ namespace BuffSystem.Runtime
             }
             return null;
         }
+
+        /// <summary>
+        /// 处理组策略 - 在创建Buff前检查组配置
+        /// </summary>
+        private bool HandleGroupPolicy(BuffDataSO data, object source)
+        {
+            if (data.GroupConfigs.Count == 0)
+                return true; // 无组配置，直接通过
+
+            foreach (var groupConfig in data.GroupConfigs)
+            {
+                if (string.IsNullOrEmpty(groupConfig.groupId))
+                    continue;
+
+                // 获取或创建组
+                if (!buffGroups.TryGetValue(groupConfig.groupId, out var group))
+                {
+                    // 使用配置创建组
+                    var policy = ConvertToBuffGroupPolicy(groupConfig.strategy);
+                    int maxStack = groupConfig.maxStack > 0 ? groupConfig.maxStack : 5;
+                    group = new BuffGroup(groupConfig.groupId, maxStack, policy);
+                    buffGroups[groupConfig.groupId] = group;
+                }
+
+                // 检查组是否已满
+                if (group.Count >= group.MaxGroupStack)
+                {
+                    switch (groupConfig.strategy)
+                    {
+                        case GroupStrategyType.BlockIfFull:
+                            if (Data.BuffSystemConfig.Instance.EnableDebugLog)
+                            {
+                                Debug.Log($"[BuffContainer] 添加Buff {data.Name} 被阻止，组 '{groupConfig.groupId}' 已满");
+                            }
+                            return false;
+
+                        case GroupStrategyType.ReplaceOldest:
+                        case GroupStrategyType.ReplaceWeakest:
+                            // 组策略会在AddToGroup中处理替换
+                            break;
+
+                        case GroupStrategyType.AddToGroup:
+                            // 允许添加，由组的Policy处理
+                            break;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 将GroupStrategyType转换为BuffGroupPolicy
+        /// </summary>
+        private BuffGroupPolicy ConvertToBuffGroupPolicy(GroupStrategyType strategy)
+        {
+            return strategy switch
+            {
+                GroupStrategyType.ReplaceOldest => BuffGroupPolicy.ReplaceOldest,
+                GroupStrategyType.ReplaceWeakest => BuffGroupPolicy.ReplaceWeakest,
+                GroupStrategyType.BlockIfFull => BuffGroupPolicy.BlockNew,
+                GroupStrategyType.AddToGroup => BuffGroupPolicy.AllowAll,
+                _ => BuffGroupPolicy.AllowAll
+            };
+        }
+
+        /// <summary>
+        /// 将Buff添加到配置的组中
+        /// </summary>
+        private void AddBuffToGroups(BuffEntity buff, BuffDataSO data)
+        {
+            if (data.GroupConfigs.Count == 0)
+                return;
+
+            foreach (var groupConfig in data.GroupConfigs)
+            {
+                if (string.IsNullOrEmpty(groupConfig.groupId))
+                    continue;
+
+                if (buffGroups.TryGetValue(groupConfig.groupId, out var group))
+                {
+                    bool added = group.AddToGroup(buff);
+                    if (!added && Data.BuffSystemConfig.Instance.EnableDebugLog)
+                    {
+                        Debug.Log($"[BuffContainer] Buff {buff.Name} 未能添加到组 '{groupConfig.groupId}'");
+                    }
+                }
+            }
+        }
         
         /// <summary>
         /// 处理依赖移除 - 当Buff被移除时，移除依赖它的Buff
         /// </summary>
         private void HandleDependencyRemoval(int removedBuffId)
         {
-            // 收集需要移除的Buff
-            var buffsToRemove = new List<BuffEntity>();
+            // 收集需要移除的Buff - 预分配容量避免动态扩容
+            var buffsToRemove = new List<BuffEntity>(buffByInstanceId.Count);
             
             foreach (var buff in buffByInstanceId.Values)
             {

@@ -43,6 +43,9 @@ namespace BuffSystem.Runtime
         // v4.0: 免疫系统的HashSet缓存（提高查询性能）
         private HashSet<int> immuneBuffIdSet;
         private HashSet<string> immuneTagSet;
+
+        // v8.0: 免疫标签哈希缓存（O(1)查询性能）
+        private HashSet<int> immuneTagHashSet;
         
         #region Properties
         
@@ -109,7 +112,20 @@ namespace BuffSystem.Runtime
         public bool IsImmuneToTag(string tag)
         {
             if (string.IsNullOrEmpty(tag)) return false;
-            return immuneTagSet?.Contains(tag) ?? false;
+
+            // 使用哈希优化检查
+            int hash = BuffTagManager.GetTagHash(tag);
+            return immuneTagHashSet?.Contains(hash) ?? false;
+        }
+
+        /// <summary>
+        /// 检查是否对指定标签免疫（BuffTag版本，性能更优）
+        /// </summary>
+        /// <param name="tag">Buff标签</param>
+        /// <returns>是否免疫</returns>
+        public bool IsImmuneToTag(BuffTag tag)
+        {
+            return immuneTagHashSet?.Contains(tag.TagHash) ?? false;
         }
         
         public IReadOnlyList<string> ImmuneTags => immuneTags;
@@ -285,7 +301,7 @@ namespace BuffSystem.Runtime
         /// <summary>
         /// 获取所有活跃持有者的数量
         /// </summary>
-        internal static int ActiveOwnerCount => allOwners.Count;
+        public static int ActiveOwnerCount => allOwners.Count;
 
         /// <summary>
         /// 获取所有Buff持有者（只读）
@@ -327,11 +343,22 @@ namespace BuffSystem.Runtime
         
         /// <summary>
         /// v4.0: 初始化免疫系统
+        /// v8.0: 添加标签哈希缓存
         /// </summary>
         private void InitializeImmunity()
         {
             immuneBuffIdSet = new HashSet<int>(immuneBuffIds);
             immuneTagSet = new HashSet<string>(immuneTags);
+
+            // v8.0: 初始化标签哈希缓存
+            immuneTagHashSet = new HashSet<int>();
+            foreach (var tag in immuneTags)
+            {
+                if (!string.IsNullOrEmpty(tag))
+                {
+                    immuneTagHashSet.Add(BuffTagManager.GetTagHash(tag));
+                }
+            }
         }
         
         #endregion
@@ -530,7 +557,8 @@ namespace BuffSystem.Runtime
         {
             if (buffContainer == null) return;
             
-            var buffsToRemove = new List<IBuff>();
+            // 预分配容量避免动态扩容
+            var buffsToRemove = new List<IBuff>(buffContainer.Count);
             foreach (var buff in buffContainer.AllBuffs)
             {
                 if (buff.Data.Tags.Contains(tag))
